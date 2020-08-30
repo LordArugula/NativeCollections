@@ -1,2 +1,2 @@
 # NativeCollections
- A small library of unmanaged collections for Unity DOTS.
+ A small library of unmanaged collections for use with Unity DOTS.

@@ -2,7 +2,7 @@
   "name": "com.arugula.collections",
   "version": "0.1.0",
   "displayName": "Arugula.Collections",
-  "description": "Contains an unmanaged minimum heap.",
+  "description": "A small library of unmanaged collections for use with Unity DOTS.",
   "unity": "2020.1",
   "unityRelease": "3f1",
   "dependencies": {
