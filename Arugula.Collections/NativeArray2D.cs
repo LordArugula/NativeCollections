@@ -70,7 +70,7 @@ namespace Arugula.Collections
             }
         }
 
-#if ENABLE_UNITY_COLLECTION_CHECKS
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
         internal AtomicSafetyHandle m_Safety;
         static readonly SharedStatic<int> s_staticSafetyId = SharedStatic<int>.GetOrCreate<NativeArray2D<T>>();
 
@@ -151,7 +151,7 @@ namespace Arugula.Collections
 
         private static void Allocate(int length0, int length1, Allocator allocator, out NativeArray2D<T> array)
         {
-#if ENABLE_UNITY_COLLECTION_CHECKS
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
             // Native allocation is only valid for Temp, Job and Persistent.
             if (allocator <= Allocator.None)
                 throw new ArgumentException("Allocator must be Temp, TempJob or Persistent.", nameof(allocator));
@@ -166,7 +166,7 @@ namespace Arugula.Collections
 
             long totalSize = UnsafeUtility.SizeOf<T>() * (long)length0 * (long)length1;
 
-#if ENABLE_UNITY_COLLECTION_CHECKS
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
             if (totalSize > int.MaxValue)
                 throw new InvalidOperationException($"Length0 * Length1 * sizeof(T) cannot exceed {int.MaxValue} bytes.");
 #endif
@@ -176,7 +176,7 @@ namespace Arugula.Collections
                 m_Buffer = UnsafeUtility.Malloc(totalSize, UnsafeUtility.AlignOf<T>(), allocator),
                 m_Length0 = length0,
                 m_Length1 = length1,
-#if ENABLE_UNITY_COLLECTION_CHECKS
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
                 m_AllocatorLabel = allocator
 #endif
             };
@@ -186,7 +186,7 @@ namespace Arugula.Collections
 
         private void CheckElementReadAccess(int index0, int index1)
         {
-#if ENABLE_UNITY_COLLECTION_CHECKS
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
 
@@ -203,7 +203,7 @@ namespace Arugula.Collections
 
         private void CheckElementWriteAccess(int index0, int index1)
         {
-#if ENABLE_UNITY_COLLECTION_CHECKS
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
 
@@ -249,7 +249,7 @@ namespace Arugula.Collections
 
         public static void Copy(NativeArray2D<T> src, NativeArray2D<T> dst)
         {
-#if ENABLE_UNITY_COLLECTION_CHECKS
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(src.m_Safety);
             AtomicSafetyHandle.CheckWriteAndThrow(dst.m_Safety);
 #endif
@@ -263,7 +263,7 @@ namespace Arugula.Collections
 
         public static void Copy(NativeArray2D<T> src, T[,] dst)
         {
-#if ENABLE_UNITY_COLLECTION_CHECKS
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(src.m_Safety);
 #endif
             if (src.m_Length0 != dst.GetLength(0) || src.m_Length1 != dst.GetLength(1))
@@ -284,7 +284,7 @@ namespace Arugula.Collections
 
         public static void Copy(T[,] src, NativeArray2D<T> dst)
         {
-#if ENABLE_UNITY_COLLECTION_CHECKS
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(dst.m_Safety);
 #endif
             if (src.GetLength(0) != dst.m_Length0 || src.GetLength(1) != dst.m_Length1)
@@ -305,7 +305,7 @@ namespace Arugula.Collections
 
         public void Dispose()
         {
-#if ENABLE_UNITY_COLLECTION_CHECKS
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
             if (m_Buffer == null)
             {
                 throw new ObjectDisposedException("The NativeArray is already disposed.");
