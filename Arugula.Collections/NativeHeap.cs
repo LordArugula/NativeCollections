@@ -12,10 +12,14 @@ namespace Arugula.Collections
     /// <summary>
     /// An unmanaged, minimum heap.
     /// </summary>
+    /// <remarks>
+    /// Does not support parallel writing.
+    /// </remarks>
     /// <typeparam name="T">The type of the elements in the container.</typeparam>
     [StructLayout(LayoutKind.Sequential)]
     [NativeContainer]
     [DebuggerDisplay("Length = {Count}")]
+    [DebuggerTypeProxy(typeof(NativeHeapDebugView<>))]
     public unsafe struct NativeHeap<T> : IDisposable, INativeDisposable
         where T : struct, IComparable<T>
     {
@@ -438,6 +442,20 @@ namespace Arugula.Collections
             return jobHandle;
         }
     }
+    internal unsafe sealed class NativeHeapDebugView<T> where T : struct, IComparable<T>
+    {
+        private readonly NativeHeap<T> m_Heap;
+
+        public NativeHeapDebugView(NativeHeap<T> heap)
+        {
+            m_Heap = heap;
+        }
+
+        public T[] Items
+        {
+            get => m_Heap.ToArray();
+        }
+    }
 
     [NativeContainer]
     internal unsafe struct NativeHeapDispose
@@ -464,5 +482,5 @@ namespace Arugula.Collections
         {
             Data.Dispose();
         }
-    } 
+    }
 }

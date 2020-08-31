@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.Burst;
 using Unity.Collections;
@@ -81,10 +80,11 @@ namespace Arugula.Collections
         }
 
         [NativeSetClassTypeToNullOnSchedule]
-        DisposeSentinel m_DisposeSentinel;
+        internal DisposeSentinel m_DisposeSentinel;
+#endif
 
         internal Allocator m_AllocatorLabel;
-#endif
+
 
         [NativeDisableUnsafePtrRestriction]
         internal void* m_Buffer;
@@ -121,12 +121,6 @@ namespace Arugula.Collections
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetIndex(int index0, int index1)
-        {
-            return index0 * m_Length1 + index1;
-        }
-
         public bool IsCreated
         {
             get => m_Buffer != null;
@@ -147,14 +141,17 @@ namespace Arugula.Collections
         public NativeArray2D(int length0, int length1, Allocator allocator, NativeArrayOptions options = NativeArrayOptions.ClearMemory)
         {
             Allocate(length0, length1, allocator, out this);
+            if ((options & NativeArrayOptions.ClearMemory) == NativeArrayOptions.ClearMemory)
+            {
+                UnsafeUtility.MemClear(m_Buffer, Length * (long)UnsafeUtility.SizeOf<T>());
+            }
         }
 
         private static void Allocate(int length0, int length1, Allocator allocator, out NativeArray2D<T> array)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            // Native allocation is only valid for Temp, Job and Persistent.
-            if (allocator <= Allocator.None)
-                throw new ArgumentException("Allocator must be Temp, TempJob or Persistent.", nameof(allocator));
+            CheckAllocator(allocator);
+            CollectionHelper.CheckIsUnmanaged<T>();
 
             if (length0 <= 0)
                 throw new ArgumentOutOfRangeException(nameof(length0), "Length0 must be >= 0.");
@@ -162,11 +159,8 @@ namespace Arugula.Collections
             if (length1 <= 0)
                 throw new ArgumentOutOfRangeException(nameof(length1), "Length1 must be >= 0.");
 
-#endif
-
             long totalSize = UnsafeUtility.SizeOf<T>() * (long)length0 * (long)length1;
 
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
             if (totalSize > int.MaxValue)
                 throw new InvalidOperationException($"Length0 * Length1 * sizeof(T) cannot exceed {int.MaxValue} bytes.");
 #endif
@@ -176,12 +170,17 @@ namespace Arugula.Collections
                 m_Buffer = UnsafeUtility.Malloc(totalSize, UnsafeUtility.AlignOf<T>(), allocator),
                 m_Length0 = length0,
                 m_Length1 = length1,
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
                 m_AllocatorLabel = allocator
-#endif
             };
 
-
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            DisposeSentinel.Create(out array.m_Safety, out array.m_DisposeSentinel, 2, allocator);
+            if (s_staticSafetyId.Data == 0)
+            {
+                CreateStaticSafetyId();
+            }
+            AtomicSafetyHandle.SetStaticSafetyId(ref array.m_Safety, s_staticSafetyId.Data);
+#endif
         }
 
         private void CheckElementReadAccess(int index0, int index1)
@@ -274,10 +273,9 @@ namespace Arugula.Collections
             var handle = GCHandle.Alloc(dst, GCHandleType.Pinned);
             var addr = handle.AddrOfPinnedObject();
 
-            UnsafeUtility.MemCpy(
-                addr.ToPointer(),
-                src.m_Buffer,
-                src.Length * UnsafeUtility.SizeOf<T>());
+            UnsafeUtility.MemCpy(addr.ToPointer(),
+                                 src.m_Buffer,
+                                 src.Length * UnsafeUtility.SizeOf<T>());
 
             handle.Free();
         }
@@ -295,10 +293,9 @@ namespace Arugula.Collections
             var handle = GCHandle.Alloc(src, GCHandleType.Pinned);
             var addr = handle.AddrOfPinnedObject();
 
-            UnsafeUtility.MemCpy(
-                dst.m_Buffer,
-                addr.ToPointer(),
-                src.Length * UnsafeUtility.SizeOf<T>());
+            UnsafeUtility.MemCpy(dst.m_Buffer,
+                                 addr.ToPointer(),
+                                 src.Length * UnsafeUtility.SizeOf<T>());
 
             handle.Free();
         }
@@ -306,23 +303,12 @@ namespace Arugula.Collections
         public void Dispose()
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            if (m_Buffer == null)
-            {
-                throw new ObjectDisposedException("The NativeArray is already disposed.");
-            }
 
-            if (m_AllocatorLabel == Allocator.Invalid)
-            {
-                throw new InvalidOperationException("The NativeArray can not be Disposed because it was not allocated with a valid allocator.");
-            }
+            CheckAllocator(m_AllocatorLabel);
 
-            if (m_AllocatorLabel > Allocator.None)
-            {
-                DisposeSentinel.Dispose(ref m_Safety, ref m_DisposeSentinel);
-                UnsafeUtility.Free(m_Buffer, m_AllocatorLabel);
-                m_AllocatorLabel = Allocator.Invalid;
-            }
+            DisposeSentinel.Dispose(ref m_Safety, ref m_DisposeSentinel);
 #endif
+            UnsafeUtility.Free(m_Buffer, m_AllocatorLabel);
 
             m_Buffer = null;
             m_Length0 = m_Length1 = 0;
@@ -343,14 +329,12 @@ namespace Arugula.Collections
             return new Enumerator(ref this);
         }
 
-        [BurstDiscard]
-        internal static void IsUnmanagedAndThrow()
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        private static void CheckAllocator(Allocator allocator)
         {
-            if (!UnsafeUtility.IsValidNativeContainerElementType<T>())
-            {
-                throw new InvalidOperationException(
-                    $"{typeof(T)} used in NativeArray<{typeof(T)}> must be unmanaged (contain no managed types) and cannot itself be a native container type.");
-            }
+            // Native allocation is only valid for Temp, Job and Persistent.
+            if (allocator <= Allocator.None)
+                throw new ArgumentException("Allocator must be Temp, TempJob or Persistent", nameof(allocator));
         }
     }
 
