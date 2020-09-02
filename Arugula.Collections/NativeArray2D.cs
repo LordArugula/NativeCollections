@@ -74,7 +74,7 @@ namespace Arugula.Collections
         static readonly SharedStatic<int> s_staticSafetyId = SharedStatic<int>.GetOrCreate<NativeArray2D<T>>();
 
         [BurstDiscard]
-        static void CreateStaticSafetyId()
+        private static void CreateStaticSafetyId()
         {
             s_staticSafetyId.Data = AtomicSafetyHandle.NewStaticSafetyId<NativeArray2D<T>>();
         }
@@ -126,18 +126,35 @@ namespace Arugula.Collections
             get => m_Buffer != null;
         }
 
+        /// <summary>
+        /// Creates a copy of <paramref name="array"/>.
+        /// </summary>
+        /// <param name="array"></param>
+        /// <param name="allocator"></param>
         public NativeArray2D(T[,] array, Allocator allocator)
         {
             Allocate(array.GetLength(0), array.GetLength(1), allocator, out this);
             Copy(array, this);
         }
 
+        /// <summary>
+        /// Creates a copy of <paramref name="array"/>.
+        /// </summary>
+        /// <param name="array"></param>
+        /// <param name="allocator"></param>
         public NativeArray2D(NativeArray2D<T> array, Allocator allocator)
         {
             Allocate(array.m_Length0, array.m_Length1, allocator, out this);
             Copy(array, this);
         }
 
+        /// <summary>
+        /// Creates a 2D array with dimensions [<paramref name="length0"/>, <paramref name="length1"/>].
+        /// </summary>
+        /// <param name="length0">The length of the array's first dimension.</param>
+        /// <param name="length1">The length of the array's second dimension.</param>
+        /// <param name="allocator"></param>
+        /// <param name="options">Whether to clear the array or leave it uninitialized.</param>
         public NativeArray2D(int length0, int length1, Allocator allocator, NativeArrayOptions options = NativeArrayOptions.ClearMemory)
         {
             Allocate(length0, length1, allocator, out this);
@@ -224,9 +241,9 @@ namespace Arugula.Collections
         }
 
         [WriteAccessRequired]
-        public void CopyFrom(T[,] src)
+        public void CopyFrom(T[,] dst)
         {
-            Copy(src, this);
+            Copy(dst, this);
         }
 
         public void CopyTo(NativeArray2D<T> dst)
@@ -350,11 +367,6 @@ namespace Arugula.Collections
         public T[,] Items
         {
             get => m_Array.ToArray();
-        }
-
-        public void* Buffer
-        {
-            get => m_Array.m_Buffer;
         }
     }
 }

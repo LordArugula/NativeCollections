@@ -187,20 +187,16 @@ namespace Arugula.Collections
         }
 
         /// <summary>
-        /// Removes the head of the heap and returns it.
+        /// Removes the root of the heap and returns it.
         /// </summary>
         /// <returns></returns>
         public T Pop()
         {
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-            AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
-#endif
-            T value = this[0];
-            m_HeapData->RemoveAtSwapBack<T>(0);
-
-            ShiftDown(0);
-
-            return value;
+            if (!TryPop(out T element))
+            {
+                ThrowEmpty();
+            }
+            return element;
         }
 
         /// <summary>
@@ -209,10 +205,18 @@ namespace Arugula.Collections
         /// <returns></returns>
         public T Peek()
         {
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-            AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
-#endif
-            return this[0];
+            if (!TryPeek(out T element))
+            {
+                ThrowEmpty();
+            }
+
+            return element;
+        }
+
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        private static void ThrowEmpty()
+        {
+            throw new System.InvalidOperationException("Trying to read from an empty heap.");
         }
 
         /// <summary>
@@ -248,13 +252,6 @@ namespace Arugula.Collections
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
-            //T root = value;
-            //if (!IsEmpty && m_values[0].CompareTo(value) < 0)
-            //{
-            //    root = m_values[0];
-            //    m_values[0] = value;
-            //    ShiftDown(0);
-            //}
 
             if (!IsEmpty && this[0].CompareTo(value) < 0)
             {
@@ -280,6 +277,51 @@ namespace Arugula.Collections
             ShiftDown(0);
 
             return root;
+        }
+
+        /// <summary>
+        /// Tries to remove the root of the heap and returns it.
+        /// </summary>
+        /// <param name="element">Contains the element that was removed 
+        /// or a default object if the operation failed.</param>
+        /// <returns>True if an element was removed from the heap.</returns>
+        public bool TryPop(out T element)
+        {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
+#endif
+            if (Count == 0)
+            {
+                element = default;
+                return false;
+            }
+
+            element = this[0];
+            m_HeapData->RemoveAtSwapBack<T>(0);
+            ShiftDown(0);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Tries to return the root of the heap, without removing it.
+        /// </summary>
+        /// <param name="element">Contains the element at the root of the heap 
+        /// or a default object if the operation failed.</param>
+        /// <returns>True if an element was returned.</returns>
+        public bool TryPeek(out T element)
+        {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
+#endif
+            if (Count == 0)
+            {
+                element = default;
+                return false;
+            }
+
+            element = this[0];
+            return true;
         }
 
         /// <summary>
@@ -388,7 +430,6 @@ namespace Arugula.Collections
         {
             // Make sure we cannot allocate more than int.MaxValue (2,147,483,647 bytes)
             // because the underlying UnsafeUtility.Malloc is expecting a int.
-            // TODO: change UnsafeUtility.Malloc to accept a UIntPtr length instead to match C++ API
             if (totalSize > int.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(initialCapacity), $"Capacity * sizeof(T) cannot exceed {int.MaxValue} bytes");
         }
@@ -442,7 +483,9 @@ namespace Arugula.Collections
             return jobHandle;
         }
     }
-    internal unsafe sealed class NativeHeapDebugView<T> where T : struct, IComparable<T>
+
+    internal unsafe sealed class NativeHeapDebugView<T>
+        where T : struct, IComparable<T>
     {
         private readonly NativeHeap<T> m_Heap;
 
@@ -451,7 +494,7 @@ namespace Arugula.Collections
             m_Heap = heap;
         }
 
-        public T[] Items
+        public T[] Elements
         {
             get => m_Heap.ToArray();
         }
