@@ -18,31 +18,29 @@ namespace Arugula.Collections
     [NativeContainer]
     [DebuggerDisplay("Length0 = {Length0}, Length1 = {Length1}")]
     [DebuggerTypeProxy(typeof(NativeArray2DDebugView<>))]
-    public unsafe struct NativeArray2D<T> : IDisposable, IEnumerable<T>, IEquatable<NativeArray2D<T>>
+    public unsafe struct NativeArray2D<T> : INativeDisposable, IEnumerable<T>, IEquatable<NativeArray2D<T>>
         where T : struct
     {
         public struct Enumerator : IEnumerator<T>
         {
             private NativeArray2D<T> m_Array;
 
-            private int m_Index0;
-            private int m_Index1;
+            private int m_Index;
 
             public Enumerator(ref NativeArray2D<T> array)
             {
                 m_Array = array;
-                m_Index0 = 0;
-                m_Index1 = -1;
+                m_Index = -1;
             }
 
             public T Current
             {
-                get => m_Array[m_Index0, m_Index1];
+                get => m_Array[m_Index];
             }
 
             object IEnumerator.Current
             {
-                get => m_Array[m_Index0, m_Index1];
+                get => m_Array[m_Index];
             }
 
             public void Dispose()
@@ -52,20 +50,13 @@ namespace Arugula.Collections
 
             public bool MoveNext()
             {
-                m_Index1++;
-                if (m_Index1 >= m_Array.Length1)
-                {
-                    m_Index1 = 0;
-                    m_Index0++;
-                    return m_Index0 < m_Array.Length0;
-                }
-                return true;
+                m_Index++;
+                return m_Index < m_Array.Length;
             }
 
             public void Reset()
             {
-                m_Index0 = 0;
-                m_Index1 = -1;
+                m_Index = -1;
             }
         }
 
@@ -92,16 +83,25 @@ namespace Arugula.Collections
         internal int m_Length0;
         internal int m_Length1;
 
+        /// <summary>
+        /// The length of the array's first dimension.
+        /// </summary>
         public int Length0
         {
             get => m_Length0;
         }
 
+        /// <summary>
+        /// The length of the array's second dimension.
+        /// </summary>
         public int Length1
         {
             get => m_Length1;
         }
 
+        /// <summary>
+        /// The total length of the array. Equal to <see cref="Length0"/> multiplied by <see cref="Length1"/>.
+        /// </summary>
         public int Length
         {
             get => m_Length0 * m_Length1;
@@ -118,6 +118,21 @@ namespace Arugula.Collections
             {
                 CheckElementWriteAccess(index0, index1);
                 UnsafeUtility.WriteArrayElement(m_Buffer, index0 * m_Length1 + index1, value);
+            }
+        }
+
+        internal T this[int index]
+        {
+            get
+            {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
+#endif
+                if (index >= 0 && index < Length)
+                {
+                    return UnsafeUtility.ReadArrayElement<T>(m_Buffer, index);
+                }
+                throw new System.IndexOutOfRangeException();
             }
         }
 
@@ -169,6 +184,7 @@ namespace Arugula.Collections
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             CheckAllocator(allocator);
             CollectionHelper.CheckIsUnmanaged<T>();
+#endif
 
             if (length0 <= 0)
                 throw new ArgumentOutOfRangeException(nameof(length0), "Length0 must be >= 0.");
@@ -180,7 +196,6 @@ namespace Arugula.Collections
 
             if (totalSize > int.MaxValue)
                 throw new InvalidOperationException($"Length0 * Length1 * sizeof(T) cannot exceed {int.MaxValue} bytes.");
-#endif
 
             array = new NativeArray2D<T>()
             {
@@ -205,15 +220,9 @@ namespace Arugula.Collections
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
-
-            if (index0 < 0 || index0 >= m_Length0)
+            if (!InRange(index0, index1))
             {
-                throw new IndexOutOfRangeException($"Index {index0} is out of range (must be between 0 and {m_Length0 - 1}).");
-            }
-
-            if (index1 < 0 || index1 >= m_Length1)
-            {
-                throw new IndexOutOfRangeException($"Index {index1} is out of range (must be between 0 and {m_Length1 - 1}).");
+                throw new IndexOutOfRangeException();
             }
         }
 
@@ -222,16 +231,15 @@ namespace Arugula.Collections
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
-
-            if (index0 < 0 || index0 >= m_Length0)
+            if (!InRange(index0, index1))
             {
-                throw new IndexOutOfRangeException($"Index {index0} is out of range (must be between 0 and {m_Length0 - 1}).");
+                throw new IndexOutOfRangeException();
             }
+        }
 
-            if (index1 < 0 || index1 >= m_Length1)
-            {
-                throw new IndexOutOfRangeException($"Index {index1} is out of range (must be between 0 and {m_Length1 - 1}).");
-            }
+        public bool InRange(int index0, int index1)
+        {
+            return (index0 >= 0 && index0 < m_Length0) && (index1 >= 0 && index1 < m_Length1);
         }
 
         [WriteAccessRequired]
@@ -331,6 +339,32 @@ namespace Arugula.Collections
             m_Length0 = m_Length1 = 0;
         }
 
+        public JobHandle Dispose(JobHandle inputDeps)
+        {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            DisposeSentinel.Clear(ref m_DisposeSentinel);
+#endif
+
+            var jobHandle = new NativeArray2DDisposeJob
+            {
+                Data = new NativeArray2DDispose
+                {
+                    m_Buffer = m_Buffer,
+                    m_AllocatorLabel = m_AllocatorLabel,
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                    m_Safety = m_Safety
+#endif
+                }
+            }.Schedule(inputDeps);
+
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.Release(m_Safety);
+#endif
+            m_Buffer = null;
+
+            return jobHandle;
+        }
+
         public bool Equals(NativeArray2D<T> other)
         {
             return m_Buffer == other.m_Buffer && m_Length0 == other.m_Length0 && m_Length1 == other.m_Length1;
@@ -353,6 +387,7 @@ namespace Arugula.Collections
             if (allocator <= Allocator.None)
                 throw new ArgumentException("Allocator must be Temp, TempJob or Persistent", nameof(allocator));
         }
+
     }
 
     internal unsafe sealed class NativeArray2DDebugView<T> where T : struct
@@ -367,6 +402,35 @@ namespace Arugula.Collections
         public T[,] Items
         {
             get => m_Array.ToArray();
+        }
+    }
+
+    [NativeContainer]
+    internal unsafe struct NativeArray2DDispose
+    {
+        [NativeDisableUnsafePtrRestriction]
+        internal void* m_Buffer;
+
+        internal Allocator m_AllocatorLabel;
+
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+        internal AtomicSafetyHandle m_Safety;
+#endif
+
+        public void Dispose()
+        {
+            UnsafeUtility.Free(m_Buffer, m_AllocatorLabel);
+        }
+    }
+
+    [BurstCompile]
+    struct NativeArray2DDisposeJob : IJob
+    {
+        public NativeArray2DDispose Data;
+
+        public void Execute()
+        {
+            Data.Dispose();
         }
     }
 }

@@ -66,11 +66,13 @@ namespace Arugula.Collections.Tests
                         array[x, y] = x * 3 + y;
                     }
                 }
+
                 int i = 0;
                 foreach (var item in array)
                 {
                     Assert.AreEqual(i++, item);
                 }
+                Assert.AreEqual(array.Length, i);
             });
             array.Dispose();
         }
