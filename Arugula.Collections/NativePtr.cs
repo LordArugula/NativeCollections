@@ -8,6 +8,7 @@ using Unity.Jobs;
 /// An unmanaged pointer used to store single value outputs from a Job.
 /// </summary>
 [NativeContainer]
+[NativeContainerSupportsDeallocateOnJobCompletion]
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct NativePtr<T> : INativeDisposable
     where T : struct
