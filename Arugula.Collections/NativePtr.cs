@@ -14,7 +14,7 @@ public unsafe struct NativePtr<T> : INativeDisposable
     where T : struct
 {
     [NativeDisableUnsafePtrRestriction]
-    internal void* m_Ptr;
+    internal void* m_Buffer;
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
     internal AtomicSafetyHandle m_Safety;
@@ -34,7 +34,7 @@ public unsafe struct NativePtr<T> : INativeDisposable
 
     public bool IsCreated
     {
-        get => m_Ptr != null;
+        get => m_Buffer != null;
     }
 
     public T Value
@@ -44,7 +44,7 @@ public unsafe struct NativePtr<T> : INativeDisposable
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
-            return UnsafeUtility.ReadArrayElement<T>(m_Ptr, 0);
+            return UnsafeUtility.ReadArrayElement<T>(m_Buffer, 0);
         }
         [WriteAccessRequired]
         set
@@ -52,7 +52,7 @@ public unsafe struct NativePtr<T> : INativeDisposable
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif       
-            UnsafeUtility.WriteArrayElement(m_Ptr, 0, value);
+            UnsafeUtility.WriteArrayElement(m_Buffer, 0, value);
         }
     }
 
@@ -78,7 +78,7 @@ public unsafe struct NativePtr<T> : INativeDisposable
         nativePtr = new NativePtr<T>
         {
             m_AllocatorLabel = allocator,
-            m_Ptr = UnsafeUtility.Malloc(UnsafeUtility.SizeOf<T>(), UnsafeUtility.AlignOf<T>(), allocator)
+            m_Buffer = UnsafeUtility.Malloc(UnsafeUtility.SizeOf<T>(), UnsafeUtility.AlignOf<T>(), allocator)
         };
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -101,6 +101,6 @@ public unsafe struct NativePtr<T> : INativeDisposable
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
         DisposeSentinel.Dispose(ref m_Safety, ref m_DisposeSentinel);
 #endif
-        UnsafeUtility.Free(m_Ptr, m_AllocatorLabel);
+        UnsafeUtility.Free(m_Buffer, m_AllocatorLabel);
     }
 }
