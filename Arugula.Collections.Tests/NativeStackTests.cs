@@ -40,7 +40,7 @@ namespace Arugula.Collections.Tests
 
             stack.Dispose();
 
-            Assert.Throws<System.ObjectDisposedException>(() =>
+            Assert.Throws<System.InvalidOperationException>(() =>
             {
                 stack.Dispose();
             });
@@ -305,7 +305,7 @@ namespace Arugula.Collections.Tests
             stack.Push(1);
             stack.Dispose(default);
 
-            Assert.Throws<System.ObjectDisposedException>(() =>
+            Assert.Throws<System.InvalidOperationException>(() =>
             {
                 stack.Dispose();
             });
@@ -366,6 +366,22 @@ namespace Arugula.Collections.Tests
             {
                 stack.Peek();
             }
+        }
+
+        public struct ManagedStructTest
+        {
+            public string managedVar;
+        }
+
+        [Test]
+        public void ThrowsIfTypeIsNotUnmanaged()
+        {
+            Assert.Throws<System.NotSupportedException>(() =>
+            {
+                var stack = new NativeStack<ManagedStructTest>(10, Unity.Collections.Allocator.Temp);
+
+                stack.Dispose();
+            });
         }
     }
 }

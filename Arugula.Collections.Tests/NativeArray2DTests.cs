@@ -291,5 +291,21 @@ namespace Arugula.Collections.Tests
 
             dst.Dispose();
         }
+
+        public struct ManagedStructTest
+        {
+            public string managedVar;
+        }
+
+        [Test]
+        public void ThrowsIfTypeIsNotUnmanaged()
+        {
+            Assert.Throws<NotSupportedException>(() =>
+            {
+                NativeArray2D<ManagedStructTest> array = new NativeArray2D<ManagedStructTest>(10, 10, Unity.Collections.Allocator.Temp);
+
+                array.Dispose();
+            });
+        }
     }
 }

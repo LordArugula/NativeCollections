@@ -81,5 +81,21 @@ namespace Arugula.Collections.Tests
                 floatPtrOutput.Value = floatPtrInput.Value;
             }
         }
+
+        public struct ManagedStructTest
+        {
+            public string managedVar;
+        }
+
+        [Test]
+        public void ThrowsIfTypeIsNotUnmanaged()
+        {
+            Assert.Throws<System.NotSupportedException>(() =>
+            {
+                var ptr = new NativePtr<ManagedStructTest>(Unity.Collections.Allocator.Temp);
+
+                ptr.Dispose();
+            });
+        }
     }
 }

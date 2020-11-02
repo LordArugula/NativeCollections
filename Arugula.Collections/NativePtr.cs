@@ -70,7 +70,10 @@ public unsafe struct NativePtr<T> : INativeDisposable
     internal static void Allocate(Allocator allocator, out NativePtr<T> nativePtr)
     {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-        CollectionHelper.CheckIsUnmanaged<T>();
+        if (!UnsafeUtility.IsUnmanaged<T>())
+        {
+            throw new System.NotSupportedException($"type {typeof(T)} must be an unmanaged type.");
+        }
 
         if (allocator <= Allocator.None)
             throw new System.ArgumentException("Allocator must be Temp, TempJob or Persistent", nameof(allocator));

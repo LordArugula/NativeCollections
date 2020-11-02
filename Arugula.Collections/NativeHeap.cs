@@ -115,7 +115,11 @@ namespace Arugula.Collections
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             CheckAllocator(allocator);
             CheckInitialCapacity(initialCapacity);
-            CollectionHelper.CheckIsUnmanaged<T>();
+            if (!UnsafeUtility.IsUnmanaged<T>())
+            {
+                throw new System.NotSupportedException($"type {typeof(T)} must be an unmanaged type.");
+            }
+
             CheckTotalSize(initialCapacity, totalSize);
 
             DisposeSentinel.Create(out m_Safety, out m_DisposeSentinel, disposeSentinelStackDepth, allocator);
@@ -644,8 +648,16 @@ namespace Arugula.Collections
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             CheckAllocator(allocator);
             CheckInitialCapacity(initialCapacity);
-            CollectionHelper.CheckIsUnmanaged<(TValue value, TPriority priority)>();
-            //CollectionHelper.CheckIsUnmanaged<TPriority>();
+            if (!UnsafeUtility.IsUnmanaged<TValue>())
+            {
+                throw new System.NotSupportedException($"type {typeof(TValue)} must be an unmanaged type.");
+            }
+
+            if (!UnsafeUtility.IsUnmanaged<TPriority>())
+            {
+                throw new System.NotSupportedException($"type {typeof(TPriority)} must be an unmanaged type.");
+            }
+
             CheckTotalSize(initialCapacity, totalSize);
 
             DisposeSentinel.Create(out m_Safety, out m_DisposeSentinel, disposeSentinelStackDepth, allocator);
