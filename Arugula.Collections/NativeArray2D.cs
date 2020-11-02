@@ -183,7 +183,10 @@ namespace Arugula.Collections
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             CheckAllocator(allocator);
-            CollectionHelper.CheckIsUnmanaged<T>();
+            if (!UnsafeUtility.IsUnmanaged<T>())
+            {
+                throw new System.NotSupportedException($"type {typeof(T)} must be an unmanaged type.");
+            }
 #endif
 
             if (length0 <= 0)

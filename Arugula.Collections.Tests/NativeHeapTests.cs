@@ -575,6 +575,32 @@ namespace Arugula.Collections.Tests
                 heap.Push(5);
             }
         }
+
+        public struct ManagedStructTest : IComparable<ManagedStructTest>, IEquatable<ManagedStructTest>
+        {
+            public string managedVar;
+
+            public int CompareTo(ManagedStructTest other)
+            {
+                return managedVar.CompareTo(other.managedVar);
+            }
+
+            public bool Equals(ManagedStructTest other)
+            {
+                return managedVar.Equals(other.managedVar);
+            }
+        }
+
+        [Test]
+        public void ThrowsIfTypeIsNotUnmanaged()
+        {
+            Assert.Throws<NotSupportedException>(() =>
+            {
+                var heap = new NativeHeap<ManagedStructTest>(10, Unity.Collections.Allocator.Temp);
+
+                heap.Dispose();
+            });
+        }
     }
 
     internal class NativeHeapTValueTPriorityTests
@@ -1168,6 +1194,26 @@ namespace Arugula.Collections.Tests
             {
                 heap.Push(5, 5);
             }
+        }
+        public struct ManagedStructTest : IEquatable<ManagedStructTest>
+        {
+            public string managedVar;
+
+            public bool Equals(ManagedStructTest other)
+            {
+                return managedVar.Equals(other.managedVar);
+            }
+        }
+
+        [Test]
+        public void ThrowsIfTypeIsNotUnmanaged()
+        {
+            Assert.Throws<NotSupportedException>(() =>
+            {
+                var heap = new NativeHeap<ManagedStructTest, int>(10, Unity.Collections.Allocator.Temp);
+
+                heap.Dispose();
+            });
         }
     }
 }

@@ -129,7 +129,10 @@ where T : struct
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             CheckAllocator(allocator);
-            CollectionHelper.CheckIsUnmanaged<T>();
+            if (!UnsafeUtility.IsUnmanaged<T>())
+            {
+                throw new System.NotSupportedException($"type {typeof(T)} must be an unmanaged type.");
+            }
 
             DisposeSentinel.Create(out m_Safety, out m_DisposeSentinel, 0, allocator);
 
