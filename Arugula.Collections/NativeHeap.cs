@@ -5,7 +5,6 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
-using Unity.Mathematics;
 
 namespace Arugula.Collections
 {
@@ -361,7 +360,6 @@ namespace Arugula.Collections
             }
         }
 
-        [BurstCompile]
         private void ShiftDown(int i)
         {
             do
@@ -372,15 +370,11 @@ namespace Arugula.Collections
 
                 if (right < Count && this[right].CompareTo(this[i]) < 0)
                 {
-                    j = math.select(right,
-                                    left,
-                                    this[left].CompareTo(this[right]) < 0);
+                    j = this[left].CompareTo(this[right]) < 0 ? left : right;
                 }
                 else
                 {
-                    j = math.select(j,
-                                    left,
-                                    left < Count && this[left].CompareTo(this[i]) < 0);
+                    j = left < Count && this[left].CompareTo(this[i]) < 0 ? left : j;
                 }
 
                 if (j >= 0) Swap(i, j);
@@ -917,7 +911,6 @@ namespace Arugula.Collections
             return new NativeArray<(TValue value, TPriority priority)>(AsArray(), allocator);
         }
 
-        [BurstCompile]
         private void ShiftUp(int i)
         {
             int p = (i - 1) / 2;
@@ -929,7 +922,6 @@ namespace Arugula.Collections
             }
         }
 
-        [BurstCompile]
         private void ShiftDown(int i)
         {
             do
@@ -940,15 +932,11 @@ namespace Arugula.Collections
 
                 if (right < Count && this[right].priority.CompareTo(this[i].priority) < 0)
                 {
-                    j = math.select(right,
-                                    left,
-                                    this[left].priority.CompareTo(this[right].priority) < 0);
+                    j = this[left].priority.CompareTo(this[right].priority) < 0 ? left : right;
                 }
                 else
                 {
-                    j = math.select(j,
-                                    left,
-                                    left < Count && this[left].priority.CompareTo(this[i].priority) < 0);
+                    j = left < Count && this[left].priority.CompareTo(this[i].priority) < 0 ? left : j;
                 }
 
                 if (j >= 0) Swap(i, j);
