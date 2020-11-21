@@ -114,6 +114,7 @@ namespace Arugula.Collections
                 CheckElementReadAccess(index0, index1);
                 return UnsafeUtility.ReadArrayElement<T>(m_Buffer, index0 * m_Length1 + index1);
             }
+            [WriteAccessRequired]
             set
             {
                 CheckElementWriteAccess(index0, index1);
@@ -218,22 +219,22 @@ namespace Arugula.Collections
 #endif
         }
 
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
         private void CheckElementReadAccess(int index0, int index1)
         {
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
-#endif
+      
             if (!InRange(index0, index1))
             {
                 throw new IndexOutOfRangeException();
             }
         }
 
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
         private void CheckElementWriteAccess(int index0, int index1)
         {
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
-#endif
+      
             if (!InRange(index0, index1))
             {
                 throw new IndexOutOfRangeException();
