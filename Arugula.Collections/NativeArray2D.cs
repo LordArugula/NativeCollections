@@ -222,8 +222,9 @@ namespace Arugula.Collections
         [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
         private void CheckElementReadAccess(int index0, int index1)
         {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
-      
+#endif
             if (!InRange(index0, index1))
             {
                 throw new IndexOutOfRangeException();
@@ -233,8 +234,10 @@ namespace Arugula.Collections
         [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
         private void CheckElementWriteAccess(int index0, int index1)
         {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
-      
+#endif
+
             if (!InRange(index0, index1))
             {
                 throw new IndexOutOfRangeException();
