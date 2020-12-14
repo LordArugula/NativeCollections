@@ -332,6 +332,39 @@ namespace Arugula.Collections
             handle.Free();
         }
 
+        /// <summary>
+        /// Flattens the array into a one-dimensional managed array.
+        /// </summary>
+        public T[] Flatten()
+        {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
+#endif
+            var dst = new T[Length];
+            var handle = GCHandle.Alloc(dst, GCHandleType.Pinned);
+            var addr = handle.AddrOfPinnedObject();
+
+            UnsafeUtility.MemCpy(addr.ToPointer(),
+                                 m_Buffer,
+                                 Length * UnsafeUtility.SizeOf<T>());
+
+            handle.Free();
+            return dst;
+        }
+
+        /// <summary>
+        /// Flattens the array into a one-dimensional NativeArray.
+        /// </summary>
+        public NativeArray<T> Flatten(Allocator allocator)
+        {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
+#endif
+            var dst = new NativeArray<T>(Length, allocator, NativeArrayOptions.UninitializedMemory);
+            UnsafeUtility.MemCpy(dst.GetUnsafePtr(), m_Buffer, Length * UnsafeUtility.SizeOf<T>());
+            return dst;
+        }
+
         public void Dispose()
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
