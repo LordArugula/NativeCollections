@@ -78,6 +78,35 @@ namespace Arugula.Collections.Tests
         }
 
         [Test]
+        public void EnumeratesSameOrderAsManaged2DArray()
+        {
+            const int width = 100;
+            const int height = 100;
+            float[,] managedArray = new float[width, height];
+            int i = 0;
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    managedArray[x, y] = i++;
+                }
+            }
+
+            i = 0;
+            foreach (var item in managedArray)
+            {
+                Assert.AreEqual(i++, item);
+            }
+
+            i = 0;
+            NativeArray2D<float> nativeArray = new NativeArray2D<float>(managedArray, Unity.Collections.Allocator.Temp);
+            foreach (var item in nativeArray)
+            {
+                Assert.AreEqual(i++, item);
+            }
+        }
+
+        [Test]
         public void CopyToNativeArray2D()
         {
             var src = new NativeArray2D<int>(10, 3, Unity.Collections.Allocator.Temp);
@@ -306,6 +335,52 @@ namespace Arugula.Collections.Tests
 
                 array.Dispose();
             });
+        }
+
+        [Test]
+        public void FlattensToManagedArray()
+        {
+            var nativeArray2D = new NativeArray2D<float>(10, 10, Unity.Collections.Allocator.Temp);
+            for (int x = 0; x < 10; x++)
+            {
+                for (int y = 0; y < 10; y++)
+                {
+                    nativeArray2D[x, y] = x;
+                }
+            }
+
+            var flattenedArray = nativeArray2D.Flatten();
+
+            Assert.AreEqual(nativeArray2D.Length, flattenedArray.Length);
+            for (int x = 0; x < 10; x++)
+            {
+                for (int y = 0; y < 10; y++)
+                {
+                    Assert.AreEqual(flattenedArray[x * 10 + y], nativeArray2D[x, y]);
+                }
+            }
+        }
+
+        [Test]
+        public void FlattensToNativeArray()
+        {
+            var nativeArray2D = new NativeArray2D<float>(10, 10, Unity.Collections.Allocator.Temp);
+            for (int x = 0; x < 10; x++)
+            {
+                for (int y = 0; y < 10; y++)
+                {
+                    nativeArray2D[x, y] = x;
+                }
+            }
+
+            var flattenedArray = nativeArray2D.Flatten(Unity.Collections.Allocator.Temp);
+
+            Assert.AreEqual(nativeArray2D.Length, flattenedArray.Length);
+            int i = 0;
+            foreach (var item in nativeArray2D)
+            {
+                Assert.AreEqual(flattenedArray[i++], item);
+            }
         }
     }
 }

@@ -1,12 +1,12 @@
 {
   "name": "com.arugula.collections",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "displayName": "Arugula.Collections",
   "description": "A small library of unmanaged collections for use with Unity DOTS.",
   "unity": "2020.1",
   "unityRelease": "3f1",
   "dependencies": {
-    "com.unity.burst": "1.4.2",
+    "com.unity.burst": "1.4.3",
     "com.unity.collections": "0.14.0-preview.16",
     "com.unity.jobs": "0.7.0-preview.17"
   },
