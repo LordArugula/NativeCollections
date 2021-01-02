@@ -1,6 +1,6 @@
 {
   "name": "com.arugula.collections",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "displayName": "Arugula.Collections",
   "description": "A small library of unmanaged collections for use with Unity DOTS.",
   "unity": "2020.1",

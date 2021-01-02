@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Unity.Burst;
@@ -593,7 +594,7 @@ namespace Arugula.Collections
                 AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
                 CheckCapacityInRange(value, m_Buffer->Length);
-                m_Buffer->SetCapacity<(TValue value, TPriority priority)>(value);
+                m_Buffer->SetCapacity<HeapNode<TValue, TPriority>>(value);
             }
         }
 
@@ -602,7 +603,7 @@ namespace Arugula.Collections
             get => m_Buffer == null || m_Buffer->IsEmpty;
         }
 
-        private (TValue value, TPriority priority) this[int index]
+        private HeapNode<TValue, TPriority> this[int index]
         {
             get
             {
@@ -610,7 +611,7 @@ namespace Arugula.Collections
                 AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
                 CheckIndexInRange(index, m_Buffer->Length);
-                return UnsafeUtility.ReadArrayElement<(TValue value, TPriority priority)>(m_Buffer->Ptr, index);
+                return UnsafeUtility.ReadArrayElement<HeapNode<TValue, TPriority>>(m_Buffer->Ptr, index);
             }
             set
             {
@@ -637,7 +638,7 @@ namespace Arugula.Collections
 
         private NativeHeap(int initialCapacity, Allocator allocator, int disposeSentinelStackDepth)
         {
-            var totalSize = UnsafeUtility.SizeOf<(TValue value, TPriority priority)>() * (long)initialCapacity;
+            var totalSize = UnsafeUtility.SizeOf<HeapNode<TValue, TPriority>>() * (long)initialCapacity;
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             CheckAllocator(allocator);
@@ -661,40 +662,14 @@ namespace Arugula.Collections
             }
             AtomicSafetyHandle.SetStaticSafetyId(ref m_Safety, s_staticSafetyId.Data);
 #endif
-            m_Buffer = UnsafeList.Create(UnsafeUtility.SizeOf<(TValue value, TPriority priority)>(),
-                                              UnsafeUtility.AlignOf<(TValue value, TPriority priority)>(),
+            m_Buffer = UnsafeList.Create(UnsafeUtility.SizeOf<HeapNode<TValue, TPriority>>(),
+                                              UnsafeUtility.AlignOf<HeapNode<TValue, TPriority>>(),
                                               initialCapacity,
                                               allocator);
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.SetBumpSecondaryVersionOnScheduleWrite(m_Safety, true);
 #endif
-        }
-
-        /// <summary>
-        /// Creates values heap from an array.
-        /// </summary>
-        /// <param name="values"></param>
-        /// <param name="allocator"></param>
-        public NativeHeap((TValue value, TPriority priority)[] values, Allocator allocator) : this(values.Length, allocator)
-        {
-            for (int i = 0; i < values.Length; i++)
-            {
-                Push(values[i].value, values[i].priority);
-            }
-        }
-
-        /// <summary>
-        /// Creates values heap from values <see cref="NativeArray{T}"/>.
-        /// </summary>
-        /// <param name="values"></param>
-        /// <param name="allocator"></param>
-        public NativeHeap(NativeArray<(TValue value, TPriority priority)> values, Allocator allocator) : this(values.Length, allocator)
-        {
-            for (int i = 0; i < values.Length; i++)
-            {
-                Push(values[i].value, values[i].priority);
-            }
         }
 
         /// <summary>
@@ -706,7 +681,7 @@ namespace Arugula.Collections
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
-            m_Buffer->Add((value, priority));
+            m_Buffer->Add(new HeapNode<TValue, TPriority>(value, priority));
 
             ShiftUp(Count - 1);
         }
@@ -720,7 +695,7 @@ namespace Arugula.Collections
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
-            m_Buffer->AddNoResize((value, priority));
+            m_Buffer->AddNoResize(new HeapNode<TValue, TPriority>(value, priority));
 
             ShiftUp(Count - 1);
         }
@@ -729,27 +704,27 @@ namespace Arugula.Collections
         /// Removes the root of the heap and returns it.
         /// </summary>
         /// <returns></returns>
-        public (TValue value, TPriority priority) Pop()
+        public HeapNode<TValue, TPriority> Pop()
         {
             if (!TryPop(out TValue value, out TPriority priority))
             {
                 ThrowEmpty();
             }
-            return (value, priority);
+            return new HeapNode<TValue, TPriority>(value, priority);
         }
 
         /// <summary>
         /// Returns the root of the heap, without removing it.
         /// </summary>
         /// <returns></returns>
-        public (TValue value, TPriority priority) Peek()
+        public HeapNode<TValue, TPriority> Peek()
         {
-            if (!TryPeek(out TValue element, out TPriority priority))
+            if (!TryPeek(out TValue value, out TPriority priority))
             {
                 ThrowEmpty();
             }
 
-            return (element, priority);
+            return new HeapNode<TValue, TPriority>(value, priority);
         }
 
         [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
@@ -786,18 +761,18 @@ namespace Arugula.Collections
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        public (TValue value, TPriority priority) PushPop(TValue value, TPriority priority)
+        public HeapNode<TValue, TPriority> PushPop(TValue value, TPriority priority)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
             if (!IsEmpty && this[0].priority.CompareTo(priority) < 0)
             {
-                this[0] = (value, priority);
+                this[0] = new HeapNode<TValue, TPriority>(value, priority);
                 ShiftDown(0);
                 return this[0];
             }
-            return (value, priority);
+            return new HeapNode<TValue, TPriority>(value, priority);
         }
 
         /// <summary>
@@ -810,11 +785,11 @@ namespace Arugula.Collections
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
-            (TValue _value, TPriority priority) = this[0];
-            this[0] = (value, priority);
+            HeapNode<TValue, TPriority> node = this[0];
+            this[0] = new HeapNode<TValue, TPriority>(value, node.priority);
             ShiftDown(0);
 
-            return _value;
+            return node.value;
         }
 
         /// <summary>
@@ -835,8 +810,10 @@ namespace Arugula.Collections
                 return false;
             }
 
-            (value, priority) = this[0];
-            m_Buffer->RemoveAtSwapBack<(TValue value, TPriority priority)>(0);
+            value = this[0].value;
+            priority = this[0].priority;
+
+            m_Buffer->RemoveAtSwapBack<HeapNode<TValue, TPriority>>(0);
             ShiftDown(0);
 
             return true;
@@ -845,22 +822,24 @@ namespace Arugula.Collections
         /// <summary>
         /// Tries to return the root of the heap, without removing it.
         /// </summary>
-        /// <param name="element">Contains the element at the root of the heap 
+        /// <param name="value">Contains the element at the root of the heap 
         /// or a default object if the operation failed.</param>
         /// <returns>True if an element was returned.</returns>
-        public bool TryPeek(out TValue element, out TPriority priority)
+        public bool TryPeek(out TValue value, out TPriority priority)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
             if (Count == 0)
             {
-                element = default;
+                value = default;
                 priority = default;
                 return false;
             }
 
-            (element, priority) = this[0];
+            value = this[0].value;
+            priority = this[0].priority;
+
             return true;
         }
 
@@ -901,14 +880,14 @@ namespace Arugula.Collections
             m_Buffer->Clear();
         }
 
-        public (TValue value, TPriority priority)[] ToArray()
+        public HeapNode<TValue, TPriority>[] ToArray()
         {
             return AsArray().ToArray();
         }
 
-        public NativeArray<(TValue value, TPriority priority)> ToNativeArray(Allocator allocator)
+        public NativeArray<HeapNode<TValue, TPriority>> ToNativeArray(Allocator allocator)
         {
-            return new NativeArray<(TValue value, TPriority priority)>(AsArray(), allocator);
+            return new NativeArray<HeapNode<TValue, TPriority>>(AsArray(), allocator);
         }
 
         private void ShiftUp(int i)
@@ -946,7 +925,7 @@ namespace Arugula.Collections
 
         private void Swap(int a, int b)
         {
-            (TValue value, TPriority priority) x = this[a];
+            HeapNode<TValue, TPriority> x = this[a];
             this[a] = this[b];
             this[b] = x;
         }
@@ -955,14 +934,14 @@ namespace Arugula.Collections
         /// Creates a <see cref="NativeArray{T}"/> that references the same backing list data.
         /// </summary>
         /// <returns></returns>
-        private NativeArray<(TValue value, TPriority priority)> AsArray()
+        private NativeArray<HeapNode<TValue, TPriority>> AsArray()
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckGetSecondaryDataPointerAndThrow(m_Safety);
             var arraySafety = m_Safety;
             AtomicSafetyHandle.UseSecondaryVersion(ref arraySafety);
 #endif
-            var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<(TValue value, TPriority priority)>(m_Buffer->Ptr, m_Buffer->Length, Allocator.None);
+            var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<HeapNode<TValue, TPriority>>(m_Buffer->Ptr, m_Buffer->Length, Allocator.None);
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, arraySafety);
@@ -1048,6 +1027,21 @@ namespace Arugula.Collections
             m_Buffer = null;
 
             return jobHandle;
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct HeapNode<TValue, TPriority>
+        where TValue : struct, IEquatable<TValue>
+        where TPriority : struct, IComparable<TPriority>
+    {
+        public TValue value;
+        public TPriority priority;
+
+        public HeapNode(TValue item1, TPriority item2)
+        {
+            value = item1;
+            priority = item2;
         }
     }
 }
