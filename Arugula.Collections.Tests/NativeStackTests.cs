@@ -40,7 +40,7 @@ namespace Arugula.Collections.Tests
 
             stack.Dispose();
 
-            Assert.Throws<System.InvalidOperationException>(() =>
+            Assert.Throws<System.ObjectDisposedException>(() =>
             {
                 stack.Dispose();
             });
@@ -305,7 +305,7 @@ namespace Arugula.Collections.Tests
             stack.Push(1);
             stack.Dispose(default);
 
-            Assert.Throws<System.InvalidOperationException>(() =>
+            Assert.Throws<System.ObjectDisposedException>(() =>
             {
                 stack.Dispose();
             });

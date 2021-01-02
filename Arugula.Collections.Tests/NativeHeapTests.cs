@@ -1,5 +1,6 @@
 ﻿using System;
 using NUnit.Framework;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 
@@ -772,60 +773,6 @@ namespace Arugula.Collections.Tests
         }
 
         [Test]
-        public void CreateFromArray_HasSameCount()
-        {
-            var array = new (int, int)[] { (1, 1), (5, 5), (2, 2), (3, 3), (4, 4) };
-            var heap = new NativeHeap<int, int>(array, Allocator.Persistent);
-
-            Assert.AreEqual(array.Length, heap.Count);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void CreateFromArray_IsSorted()
-        {
-            var array = new (int, int)[] { (1, 1), (5, 5), (2, 2), (3, 3), (4, 4) };
-            var heap = new NativeHeap<int, int>(array, Allocator.Persistent);
-
-            Assert.AreEqual(1, heap.Pop().value);
-            Assert.AreEqual(2, heap.Pop().value);
-            Assert.AreEqual(3, heap.Pop().value);
-            Assert.AreEqual(4, heap.Pop().value);
-            Assert.AreEqual(5, heap.Pop().value);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void CreateFromNativeArray_IsSorted()
-        {
-            var nativeArray = new NativeArray<(int, int)>(new (int, int)[] { (1, 1), (5, 5), (2, 2), (3, 3), (4, 4) }, Allocator.Persistent);
-            var heap = new NativeHeap<int, int>(nativeArray, Allocator.Persistent);
-
-            Assert.AreEqual(1, heap.Pop().value);
-            Assert.AreEqual(2, heap.Pop().value);
-            Assert.AreEqual(3, heap.Pop().value);
-            Assert.AreEqual(4, heap.Pop().value);
-            Assert.AreEqual(5, heap.Pop().value);
-
-            nativeArray.Dispose();
-            heap.Dispose();
-        }
-
-        [Test]
-        public void CreateFromNativeArray_HasSameCount()
-        {
-            var nativeArray = new NativeArray<(int, int)>(new (int, int)[] { (1, 1), (5, 5), (2, 2), (3, 3), (4, 4) }, Allocator.Persistent);
-            var heap = new NativeHeap<int, int>(nativeArray, Allocator.Persistent);
-
-            Assert.AreEqual(nativeArray.Length, heap.Count);
-
-            nativeArray.Dispose();
-            heap.Dispose();
-        }
-
-        [Test]
         public void Push12345_Contains12345()
         {
             var heap = new NativeHeap<int, int>(5, Allocator.Persistent);
@@ -1107,7 +1054,7 @@ namespace Arugula.Collections.Tests
             heap.Push(13, 13);
             heap.Push(9, 9);
 
-            (int, int)[] array = heap.ToArray();
+            HeapNode<int, int>[] array = heap.ToArray();
             Assert.AreEqual(array.Length, heap.Count);
 
             heap.Dispose();
@@ -1124,7 +1071,7 @@ namespace Arugula.Collections.Tests
             heap.Push(13, 13);
             heap.Push(9, 9);
 
-            (int, int)[] array = heap.ToArray();
+            HeapNode<int, int>[] array = heap.ToArray();
             Assert.AreEqual(array.Length, heap.Count);
 
             heap.Dispose();
@@ -1135,7 +1082,7 @@ namespace Arugula.Collections.Tests
         {
             var heap = new NativeHeap<int, int>(Allocator.Persistent);
 
-            (int, int)[] array = heap.ToArray();
+            HeapNode<int, int>[] array = heap.ToArray();
             Assert.AreEqual(0, array.Length);
 
             heap.Dispose();
@@ -1152,7 +1099,7 @@ namespace Arugula.Collections.Tests
             heap.Push(13, 13);
             heap.Push(9, 9);
 
-            NativeArray<(int, int)> nativeArray = heap.ToNativeArray(Allocator.Persistent);
+            NativeArray<HeapNode<int, int>> nativeArray = heap.ToNativeArray(Allocator.Persistent);
             Assert.AreEqual(nativeArray.Length, heap.Count);
 
             nativeArray.Dispose();
@@ -1164,7 +1111,7 @@ namespace Arugula.Collections.Tests
         {
             var heap = new NativeHeap<int, int>(Allocator.Persistent);
 
-            NativeArray<(int, int)> nativeArray = heap.ToNativeArray(Allocator.Persistent);
+            NativeArray<HeapNode<int, int>> nativeArray = heap.ToNativeArray(Allocator.Persistent);
             Assert.AreEqual(0, nativeArray.Length);
 
             nativeArray.Dispose();
@@ -1186,6 +1133,7 @@ namespace Arugula.Collections.Tests
             heap.Dispose();
         }
 
+        [BurstCompile]
         public struct HeapWriteJob : IJob
         {
             public NativeHeap<int, int> heap;
@@ -1195,6 +1143,7 @@ namespace Arugula.Collections.Tests
                 heap.Push(5, 5);
             }
         }
+
         public struct ManagedStructTest : IEquatable<ManagedStructTest>
         {
             public string managedVar;
