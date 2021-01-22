@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Arugula.Collections.Tests
 {
-    public class NativeArray2DTests
+    internal class NativeArray2DTests
     {
         [Test]
         public void LengthEquals_Length0xLength1()

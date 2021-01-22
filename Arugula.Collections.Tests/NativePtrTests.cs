@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Arugula.Collections.Tests
 {
-    public class NativePtrTests
+    internal class NativePtrTests
     {
         [Test]
         public void PtrStoresData()

@@ -7,7 +7,7 @@ using Unity.Jobs;
 
 namespace Arugula.Collections.Tests
 {
-    public class NativeStackTests
+    internal class NativeStackTests
     {
         [Test]
         public void IsEmpty()
@@ -278,26 +278,6 @@ namespace Arugula.Collections.Tests
         }
 
         [Test]
-        public void WriteParallelWriterParallelJob()
-        {
-            var stack = new NativeStack<int>(Allocator.TempJob);
-
-            // default capacity
-            const int length = 16;
-            new WriteToStackParallelWriterParallelJob
-            {
-                stack = stack.AsParallelWriter()
-            }.Schedule(length, 4).Complete();
-
-            for (int i = length - 1; i >= 0; i--)
-            {
-                Assert.AreEqual(i, stack.Pop());
-            }
-
-            stack.Dispose();
-        }
-
-        [Test]
         public void DisposeAfterJobCompletion()
         {
             var stack = new NativeStack<int>(Allocator.TempJob);
@@ -342,17 +322,6 @@ namespace Arugula.Collections.Tests
             public void Execute(int index)
             {
                 stack.Push(index);
-            }
-        }
-
-        [BurstCompile]
-        public struct WriteToStackParallelWriterParallelJob : IJobParallelFor
-        {
-            public NativeStack<int>.ParallelWriter stack;
-
-            public void Execute(int index)
-            {
-                stack.PushNoResize(index);
             }
         }
 
