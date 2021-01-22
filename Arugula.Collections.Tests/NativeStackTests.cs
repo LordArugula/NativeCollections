@@ -7,7 +7,7 @@ using Unity.Jobs;
 
 namespace Arugula.Collections.Tests
 {
-    public class NativeStackTests
+    internal class NativeStackTests
     {
         [Test]
         public void IsEmpty()
