@@ -291,8 +291,8 @@ namespace Arugula.Collections.PerformanceTests
 
             public void Execute(int startIndex, int count)
             {
-                int x = startIndex / array.Length0;
-                for (int y = startIndex; y < count; y++)
+                int x = startIndex / array.Length1;
+                for (int y = 0; y < count; y++)
                 {
                     array[x, y] = x * y;
                 }
@@ -308,8 +308,8 @@ namespace Arugula.Collections.PerformanceTests
 
             public void Execute(int startIndex, int count)
             {
-                int x = startIndex / array.Length0;
-                for (int y = startIndex; y < count; y++)
+                int x = startIndex / array.Length1;
+                for (int y = 0; y < count; y++)
                 {
                     array[x, y] = x * y;
                 }
