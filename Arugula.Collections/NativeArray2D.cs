@@ -80,6 +80,8 @@ namespace Arugula.Collections
         [NativeDisableUnsafePtrRestriction]
         internal void* m_Buffer;
 
+        internal int m_Length;
+
         internal int m_Length0;
         internal int m_Length1;
 
@@ -104,7 +106,7 @@ namespace Arugula.Collections
         /// </summary>
         public int Length
         {
-            get => m_Length0 * m_Length1;
+            get => m_Length;
         }
 
         public T this[int index0, int index1]
@@ -206,6 +208,9 @@ namespace Arugula.Collections
                 m_Buffer = UnsafeUtility.Malloc(totalSize, UnsafeUtility.AlignOf<T>(), allocator),
                 m_Length0 = length0,
                 m_Length1 = length1,
+                m_Length = length0 * length1,
+                //m_MinIndex = 0,
+                //m_MaxIndex = length0 * length1,
                 m_AllocatorLabel = allocator
             };
 
