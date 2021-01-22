@@ -1,5 +1,6 @@
 {
     "name": "com.arugula.collections.tests",
+    "rootNamespace": "",
     "references": [
         "GUID:729da1761eb4fc346987823fc1d1488a",
         "GUID:e0cd26848372d4e5c891c569017e11f1",
@@ -13,7 +14,7 @@
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": true,
+    "overrideReferences": false,
     "precompiledReferences": [
         "nunit.framework.dll"
     ],
