@@ -58,6 +58,25 @@ namespace Arugula.Collections.Tests
             floatPtrB.Dispose();
         }
 
+        [Test]
+        public void NativePtrDisposeJob()
+        {
+            Assert.DoesNotThrow(() =>
+            {
+                NativePtr<float> ptr = new NativePtr<float>(Unity.Collections.Allocator.TempJob);
+
+                var jobHandle = new WriteToPtrJob
+                {
+                    floatPtr = ptr,
+                    value = 0f
+                }.Schedule();
+                jobHandle = ptr.Dispose(jobHandle);
+                jobHandle.Complete();
+
+                Assert.IsTrue(ptr.IsCreated == false);
+            });
+        }
+
         [BurstCompile]
         public struct WriteToPtrJob : IJob
         {
