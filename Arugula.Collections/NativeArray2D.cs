@@ -199,7 +199,7 @@ namespace Arugula.Collections
             long totalSize = UnsafeUtility.SizeOf<T>() * (long)length0 * (long)length1;
 
             if (totalSize > int.MaxValue)
-                throw new InvalidOperationException($"Length0 * Length1 * sizeof(T) cannot exceed {int.MaxValue} bytes.");
+                throw new InvalidOperationException($"Length0 * Length1 * sizeof({nameof(T)}) cannot exceed {int.MaxValue} bytes.");
 
             array = new NativeArray2D<T>()
             {

@@ -22,7 +22,7 @@ namespace Arugula.Collections.PerformanceTests
             {
                 array.CopyFrom(source);
             })
-                .WarmupCount(100)
+                .WarmupCount(1000)
                 .MeasurementCount(1000)
                 .Run();
 
@@ -40,7 +40,7 @@ namespace Arugula.Collections.PerformanceTests
             {
                 array.CopyTo(dest);
             })
-                .WarmupCount(100)
+                .WarmupCount(1000)
                 .MeasurementCount(1000)
                 .Run();
 
@@ -62,7 +62,7 @@ namespace Arugula.Collections.PerformanceTests
                     }
                 }
             })
-                .WarmupCount(100)
+                .WarmupCount(1000)
                 .MeasurementCount(1000)
                 .Run();
         }
@@ -84,7 +84,7 @@ namespace Arugula.Collections.PerformanceTests
                     }
                 }
             })
-                .WarmupCount(100)
+                .WarmupCount(1000)
                 .MeasurementCount(1000)
                 .Run();
 
@@ -105,7 +105,7 @@ namespace Arugula.Collections.PerformanceTests
                     array = array
                 }.Schedule().Complete();
             })
-                .WarmupCount(100)
+                .WarmupCount(1000)
                 .MeasurementCount(1000)
                 .Run();
 
@@ -126,7 +126,7 @@ namespace Arugula.Collections.PerformanceTests
                     array = array
                 }.Schedule().Complete();
             })
-                .WarmupCount(100)
+                .WarmupCount(1000)
                 .MeasurementCount(1000)
                 .Run();
 
@@ -147,7 +147,7 @@ namespace Arugula.Collections.PerformanceTests
                     array = array
                 }.Schedule(width, width).Complete();
             })
-                .WarmupCount(100)
+                .WarmupCount(1000)
                 .MeasurementCount(1000)
                 .Run();
 
@@ -168,7 +168,7 @@ namespace Arugula.Collections.PerformanceTests
                     array = array
                 }.Schedule(width, width).Complete();
             })
-                .WarmupCount(100)
+                .WarmupCount(1000)
                 .MeasurementCount(1000)
                 .Run();
 
@@ -180,8 +180,6 @@ namespace Arugula.Collections.PerformanceTests
         {
             NativeArray2D<int> array = new NativeArray2D<int>(width, height, Unity.Collections.Allocator.TempJob);
 
-            int[,] dest = new int[width, height];
-
             Measure.Method(() =>
             {
                 new BurstedWriteToArrayParallelForBatchJob
@@ -189,8 +187,8 @@ namespace Arugula.Collections.PerformanceTests
                     array = array
                 }.ScheduleBatch(width * height, height).Complete();
             })
-                .WarmupCount(100)
-                .MeasurementCount(100)
+                .WarmupCount(1000)
+                .MeasurementCount(1000)
                 .Run();
 
             array.Dispose();
@@ -210,8 +208,8 @@ namespace Arugula.Collections.PerformanceTests
                     array = array
                 }.ScheduleBatch(width * height, height).Complete();
             })
-                .WarmupCount(100)
-                .MeasurementCount(100)
+                .WarmupCount(1000)
+                .MeasurementCount(1000)
                 .Run();
 
             array.Dispose();
