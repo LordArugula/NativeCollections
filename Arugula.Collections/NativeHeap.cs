@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Unity.Burst;
@@ -71,9 +70,14 @@ namespace Arugula.Collections
             }
         }
 
+        public bool IsCreated
+        {
+            get => m_Buffer != null;
+        }
+
         public bool IsEmpty
         {
-            get => m_Buffer == null || m_Buffer->IsEmpty;
+            get => !IsCreated || m_Buffer->IsEmpty;
         }
 
         private T this[int index]
@@ -101,7 +105,7 @@ namespace Arugula.Collections
         }
 
         /// <summary>
-        /// Creates values heap with an initial capacity. 
+        /// Creates a heap with an initial capacity. 
         /// </summary>
         /// <param name="initialCapacity"></param>
         /// <param name="allocator"></param>
@@ -137,7 +141,7 @@ namespace Arugula.Collections
         }
 
         /// <summary>
-        /// Creates values heap from an array.
+        /// Creates a heap from an array.
         /// </summary>
         /// <param name="values"></param>
         /// <param name="allocator"></param>
@@ -150,7 +154,7 @@ namespace Arugula.Collections
         }
 
         /// <summary>
-        /// Creates values heap from values <see cref="NativeArray{T}"/>.
+        /// Creates a heap from a <see cref="NativeArray{T}"/>.
         /// </summary>
         /// <param name="values"></param>
         /// <param name="allocator"></param>
@@ -257,13 +261,15 @@ namespace Arugula.Collections
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
 
-            if (!IsEmpty && this[0].CompareTo(value) < 0)
+            if (IsEmpty || this[0].CompareTo(value) >= 0)
             {
-                this[0] = value;
-                ShiftDown(0);
-                return this[0];
+                return value;
             }
-            return value;
+
+            T val = this[0];
+            this[0] = value;
+            ShiftDown(0);
+            return val;
         }
 
         /// <summary>
@@ -344,12 +350,11 @@ namespace Arugula.Collections
             return AsArray().ToArray();
         }
 
-        public NativeArray<T> ToNativeArray(Allocator allocator)
+        public NativeArray<T> ToArray(Allocator allocator)
         {
             return new NativeArray<T>(AsArray(), allocator);
         }
 
-        [BurstCompile]
         private void ShiftUp(int i)
         {
             int p = (i - 1) / 2;
@@ -430,7 +435,7 @@ namespace Arugula.Collections
             // Make sure we cannot allocate more than int.MaxValue (2,147,483,647 bytes)
             // because the underlying UnsafeUtility.Malloc is expecting a int.
             if (totalSize > int.MaxValue)
-                throw new ArgumentOutOfRangeException(nameof(initialCapacity), $"Capacity * sizeof(T) cannot exceed {int.MaxValue} bytes");
+                throw new ArgumentOutOfRangeException(nameof(initialCapacity), $"Capacity * sizeof({typeof(T)}) cannot exceed {int.MaxValue} bytes");
         }
 
         [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
@@ -458,6 +463,11 @@ namespace Arugula.Collections
         /// </summary>
         public void Dispose()
         {
+            if (m_Buffer == null)
+            {
+                throw new ObjectDisposedException("The NativeArray2D is already disposed.");
+            }
+
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             DisposeSentinel.Dispose(ref m_Safety, ref m_DisposeSentinel);
 #endif
@@ -467,6 +477,11 @@ namespace Arugula.Collections
 
         public JobHandle Dispose(JobHandle inputDeps)
         {
+            if (m_Buffer == null)
+            {
+                throw new ObjectDisposedException("The NativeArray2D is already disposed.");
+            }
+
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             DisposeSentinel.Clear(ref m_DisposeSentinel);
 #endif
@@ -533,7 +548,6 @@ namespace Arugula.Collections
         }
     }
 
-
     /// <summary>
     /// An unmanaged, minimum heap.
     /// </summary>
@@ -545,6 +559,7 @@ namespace Arugula.Collections
     [StructLayout(LayoutKind.Sequential)]
     [NativeContainer]
     [DebuggerDisplay("Count = {Count}")]
+    [DebuggerTypeProxy(typeof(NativeHeapDebugView<,>))]
     public unsafe struct NativeHeap<TValue, TPriority>
         where TValue : struct, IEquatable<TValue>
         where TPriority : struct, IComparable<TPriority>
@@ -598,9 +613,14 @@ namespace Arugula.Collections
             }
         }
 
+        public bool IsCreated
+        {
+            get => m_Buffer != null;
+        }
+
         public bool IsEmpty
         {
-            get => m_Buffer == null || m_Buffer->IsEmpty;
+            get => !IsCreated || m_Buffer->IsEmpty;
         }
 
         private HeapNode<TValue, TPriority> this[int index]
@@ -628,7 +648,7 @@ namespace Arugula.Collections
         }
 
         /// <summary>
-        /// Creates values heap with an initial capacity. 
+        /// Creates a heap with an initial capacity. 
         /// </summary>
         /// <param name="initialCapacity"></param>
         /// <param name="allocator"></param>
@@ -670,6 +690,70 @@ namespace Arugula.Collections
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.SetBumpSecondaryVersionOnScheduleWrite(m_Safety, true);
 #endif
+        }
+
+        /// <summary>
+        /// Creates a heap from an array containing values and an array containing priorities.
+        /// </summary>
+        /// <param name="values">An array of values.</param>
+        /// <param name="priorities">An array of priorities.</param>
+        /// <param name="allocator"></param>
+        public NativeHeap(TValue[] values, TPriority[] priorities, Allocator allocator) : this(values.Length, allocator)
+        {
+            if (values.Length != priorities.Length)
+            {
+                throw new System.ArgumentException($"{nameof(values)} and {nameof(priorities)} arrays must have the same length.");
+            }
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                Push(values[i], priorities[i]);
+            }
+        }
+
+        /// <summary>
+        /// Creates a heap from an <see cref="NativeArray{TValue}"/> containing values and an <see cref="NativeArray{TPriority}"/> containing priorities.
+        /// </summary>
+        /// <param name="values">An array of values.</param>
+        /// <param name="priorities">An array of priorities.</param>
+        /// <param name="allocator"></param>
+        public NativeHeap(NativeArray<TValue> values, NativeArray<TPriority> priorities, Allocator allocator) : this(values.Length, allocator)
+        {
+            if (values.Length != priorities.Length)
+            {
+                throw new System.ArgumentException($"{nameof(values)} and {nameof(priorities)} arrays must have the same length.");
+            }
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                Push(values[i], priorities[i]);
+            }
+        }
+
+        /// <summary>
+        /// Creates a heap from an array containing values and their priorities.
+        /// </summary>
+        /// <param name="valuePriorityPairs">An array of value and priority pairs.</param>
+        /// <param name="allocator"></param>
+        public NativeHeap(HeapNode<TValue, TPriority>[] valuePriorityPairs, Allocator allocator) : this(valuePriorityPairs.Length, allocator)
+        {
+            for (int i = 0; i < valuePriorityPairs.Length; i++)
+            {
+                Push(valuePriorityPairs[i].value, valuePriorityPairs[i].priority);
+            }
+        }
+
+        /// <summary>
+        /// Creates a heap from a <see cref="NativeArray{HeapNode}"/> containing values and their priorities.
+        /// </summary>
+        /// <param name="valuePriorityPairs">A NativeArray of value and priority pairs.</param>
+        /// <param name="allocator"></param>
+        public NativeHeap(NativeArray<HeapNode<TValue, TPriority>> valuePriorityPairs, Allocator allocator) : this(valuePriorityPairs.Length, allocator)
+        {
+            for (int i = 0; i < valuePriorityPairs.Length; i++)
+            {
+                Push(valuePriorityPairs[i].value, valuePriorityPairs[i].priority);
+            }
         }
 
         /// <summary>
@@ -766,13 +850,16 @@ namespace Arugula.Collections
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
-            if (!IsEmpty && this[0].priority.CompareTo(priority) < 0)
+            if (IsEmpty || this[0].priority.CompareTo(priority) >= 0)
             {
-                this[0] = new HeapNode<TValue, TPriority>(value, priority);
-                ShiftDown(0);
-                return this[0];
+                return new HeapNode<TValue, TPriority>(value, priority);
             }
-            return new HeapNode<TValue, TPriority>(value, priority);
+
+            var pair = this[0];
+            this[0] = new HeapNode<TValue, TPriority>(value, priority);
+            ShiftDown(0);
+            return pair;
+
         }
 
         /// <summary>
@@ -780,13 +867,13 @@ namespace Arugula.Collections
         /// More efficient than calling <see cref="Pop"/> then <see cref="Push(T)"/>.
         /// </summary>
         /// <param name="value"></param>
-        public TValue Replace(TValue value)
+        public TValue Replace(TValue value, TPriority priority)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
             HeapNode<TValue, TPriority> node = this[0];
-            this[0] = new HeapNode<TValue, TPriority>(value, node.priority);
+            this[0] = new HeapNode<TValue, TPriority>(value, priority);
             ShiftDown(0);
 
             return node.value;
@@ -885,7 +972,7 @@ namespace Arugula.Collections
             return AsArray().ToArray();
         }
 
-        public NativeArray<HeapNode<TValue, TPriority>> ToNativeArray(Allocator allocator)
+        public NativeArray<HeapNode<TValue, TPriority>> ToArray(Allocator allocator)
         {
             return new NativeArray<HeapNode<TValue, TPriority>>(AsArray(), allocator);
         }
@@ -1007,6 +1094,11 @@ namespace Arugula.Collections
 
         public JobHandle Dispose(JobHandle inputDeps)
         {
+            if (m_Buffer == null)
+            {
+                throw new ObjectDisposedException("The NativeArray2D is already disposed.");
+            }
+
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             DisposeSentinel.Clear(ref m_DisposeSentinel);
 #endif
@@ -1027,6 +1119,23 @@ namespace Arugula.Collections
             m_Buffer = null;
 
             return jobHandle;
+        }
+    }
+
+    internal unsafe sealed class NativeHeapDebugView<TValue, TPriority>
+        where TValue : struct, IEquatable<TValue>
+        where TPriority : struct, IComparable<TPriority>
+    {
+        private readonly NativeHeap<TValue, TPriority> m_Heap;
+
+        public NativeHeapDebugView(NativeHeap<TValue, TPriority> heap)
+        {
+            m_Heap = heap;
+        }
+
+        public HeapNode<TValue, TPriority>[] Elements
+        {
+            get => m_Heap.ToArray();
         }
     }
 

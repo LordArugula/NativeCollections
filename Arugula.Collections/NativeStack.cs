@@ -8,7 +8,6 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
-using UnityEngine;
 
 namespace Arugula.Collections
 {
@@ -385,7 +384,7 @@ where T : struct
             // Make sure we cannot allocate more than int.MaxValue (2,147,483,647 bytes)
             // because the underlying UnsafeUtility.Malloc is expecting a int.
             if (totalSize > int.MaxValue)
-                throw new ArgumentOutOfRangeException(nameof(initialCapacity), $"Capacity * sizeof(T) cannot exceed {int.MaxValue} bytes");
+                throw new ArgumentOutOfRangeException(nameof(initialCapacity), $"Capacity * sizeof({typeof(T)}) cannot exceed {int.MaxValue} bytes");
         }
 
         [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]

@@ -99,6 +99,7 @@ namespace Arugula.Collections
         public JobHandle Dispose(JobHandle inputDeps)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            CheckAllocator(m_AllocatorLabel);
             DisposeSentinel.Clear(ref m_DisposeSentinel);
 #endif
 
@@ -125,9 +126,19 @@ namespace Arugula.Collections
         public void Dispose()
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            CheckAllocator(m_AllocatorLabel);
             DisposeSentinel.Dispose(ref m_Safety, ref m_DisposeSentinel);
 #endif
             UnsafeUtility.Free(m_Buffer, m_AllocatorLabel);
+            m_Buffer = null;
+        }
+
+        [System.Diagnostics.Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        private static void CheckAllocator(Allocator allocator)
+        {
+            // Native allocation is only valid for Temp, Job and Persistent.
+            if (allocator <= Allocator.None)
+                throw new System.ArgumentException("Allocator must be Temp, TempJob or Persistent", nameof(allocator));
         }
     }
 

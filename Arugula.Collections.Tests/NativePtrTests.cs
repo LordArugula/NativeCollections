@@ -1,79 +1,73 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using Unity.Burst;
-using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
-using UnityEngine;
 
 namespace Arugula.Collections.Tests
 {
     internal class NativePtrTests
     {
         [Test]
-        public void PtrStoresData()
-        {
-            NativePtr<float> floatPtr = new NativePtr<float>(Unity.Collections.Allocator.TempJob);
-
-            const float value = 5f;
-            floatPtr.Value = value;
-
-            Assert.AreEqual(floatPtr.Value, value);
-            floatPtr.Dispose();
-        }
-
-        [Test]
-        public void PtrStoresDataAfterJob()
-        {
-            NativePtr<float> floatPtr = new NativePtr<float>(Unity.Collections.Allocator.TempJob);
-
-            const float value = 5f;
-            new WriteToPtrJob
-            {
-                floatPtr = floatPtr,
-                value = value
-            }.Run();
-
-            Assert.AreEqual(floatPtr.Value, value);
-            floatPtr.Dispose();
-        }
-
-        [Test]
-        public void WriteFromPtrToSecondPtr()
+        public void ReadWrite()
         {
             NativePtr<float> floatPtrA = new NativePtr<float>(Unity.Collections.Allocator.TempJob);
             NativePtr<float> floatPtrB = new NativePtr<float>(Unity.Collections.Allocator.TempJob);
 
-            const float value = 5f;
-            floatPtrA.Value = value;
+            const float valueA = 5f;
+            const float valueB = 10f;
+
+            floatPtrA.Value = valueA;
             new WriteFromPtrToPtrJob
             {
                 floatPtrInput = floatPtrA,
                 floatPtrOutput = floatPtrB,
             }.Run();
 
-            Assert.AreEqual(floatPtrB.Value, value);
+            Assert.AreEqual(floatPtrB.Value, valueA);
+
+            floatPtrA.Value = valueA;
+
+            Assert.AreEqual(floatPtrA.Value, valueA);
+
+            new WriteToPtrJob
+            {
+                floatPtr = floatPtrA,
+                value = valueB
+            }.Run();
+
+            Assert.AreEqual(floatPtrA.Value, valueB);
+
             floatPtrA.Dispose();
             floatPtrB.Dispose();
         }
 
         [Test]
-        public void NativePtrDisposeJob()
+        public void Dispose()
         {
-            Assert.DoesNotThrow(() =>
+            NativePtr<float> ptr = new NativePtr<float>(Unity.Collections.Allocator.TempJob);
+
+            Assert.IsTrue(ptr.IsCreated);
+            ptr.Dispose();
+
+            Assert.IsFalse(ptr.IsCreated);
+            Assert.Throws<System.ObjectDisposedException>(() =>
             {
-                NativePtr<float> ptr = new NativePtr<float>(Unity.Collections.Allocator.TempJob);
+                ptr.Dispose();
+            });
 
-                var jobHandle = new WriteToPtrJob
-                {
-                    floatPtr = ptr,
-                    value = 0f
-                }.Schedule();
-                jobHandle = ptr.Dispose(jobHandle);
-                jobHandle.Complete();
+            ptr = new NativePtr<float>(Unity.Collections.Allocator.TempJob);
+            var jobHandle = new WriteToPtrJob
+            {
+                floatPtr = ptr,
+                value = 0f
+            }.Schedule();
+            jobHandle = ptr.Dispose(jobHandle);
+            jobHandle.Complete();
 
-                Assert.IsTrue(ptr.IsCreated == false);
+            Assert.IsFalse(ptr.IsCreated);
+
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                ptr.Value = 3;
             });
         }
 

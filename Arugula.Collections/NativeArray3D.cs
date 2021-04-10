@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,23 +11,23 @@ using Unity.Jobs;
 namespace Arugula.Collections
 {
     /// <summary>
-    /// An unmanaged 2D array.
+    /// An unmanaged 3D array.
     /// </summary>
     /// <typeparam name="T">The type of the elements in the container.</typeparam>
     [StructLayout(LayoutKind.Sequential)]
     [NativeContainer]
-    [DebuggerDisplay("Length0 = {Length0}, Length1 = {Length1}")]
-    [DebuggerTypeProxy(typeof(NativeArray2DDebugView<>))]
-    public unsafe struct NativeArray2D<T> : INativeDisposable, IEnumerable<T>, IEquatable<NativeArray2D<T>>
+    [DebuggerDisplay("Length0 = {Length0}, Length1 = {Length1}, Length2 = {Length2}")]
+    [DebuggerTypeProxy(typeof(NativeArray3DDebugView<>))]
+    public unsafe struct NativeArray3D<T> : INativeDisposable, IEnumerable<T>, IEquatable<NativeArray3D<T>>
         where T : struct
     {
         public struct Enumerator : IEnumerator<T>
         {
-            private NativeArray2D<T> m_Array;
+            private NativeArray3D<T> m_Array;
 
             private int m_Index;
 
-            public Enumerator(ref NativeArray2D<T> array)
+            public Enumerator(ref NativeArray3D<T> array)
             {
                 m_Array = array;
                 m_Index = -1;
@@ -62,12 +62,12 @@ namespace Arugula.Collections
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
         internal AtomicSafetyHandle m_Safety;
-        static readonly SharedStatic<int> s_staticSafetyId = SharedStatic<int>.GetOrCreate<NativeArray2D<T>>();
+        static readonly SharedStatic<int> s_staticSafetyId = SharedStatic<int>.GetOrCreate<NativeArray3D<T>>();
 
         [BurstDiscard]
         private static void CreateStaticSafetyId()
         {
-            s_staticSafetyId.Data = AtomicSafetyHandle.NewStaticSafetyId<NativeArray2D<T>>();
+            s_staticSafetyId.Data = AtomicSafetyHandle.NewStaticSafetyId<NativeArray3D<T>>();
         }
 
         [NativeSetClassTypeToNullOnSchedule]
@@ -82,6 +82,7 @@ namespace Arugula.Collections
 
         internal int m_Length0;
         internal int m_Length1;
+        internal int m_Length2;
 
         /// <summary>
         /// The length of the array's first dimension.
@@ -100,25 +101,33 @@ namespace Arugula.Collections
         }
 
         /// <summary>
-        /// The total length of the array. Equal to <see cref="Length0"/> multiplied by <see cref="Length1"/>.
+        /// The length of the array's third dimension.
+        /// </summary>
+        public int Length2
+        {
+            get => m_Length2;
+        }
+
+        /// <summary>
+        /// The total length of the array. Equal to the product of <see cref="Length0"/>, <see cref="Length1"/>, and <see cref="Length2"/>.
         /// </summary>
         public int Length
         {
-            get => m_Length0 * m_Length1;
+            get => m_Length0 * m_Length1 * m_Length2;
         }
 
-        public T this[int index0, int index1]
+        public T this[int index0, int index1, int index2]
         {
             get
             {
-                CheckElementReadAccess(index0, index1);
-                return UnsafeUtility.ReadArrayElement<T>(m_Buffer, index0 * m_Length1 + index1);
+                CheckElementReadAccess(index0, index1, index2);
+                return UnsafeUtility.ReadArrayElement<T>(m_Buffer, (index0 * m_Length1 + index1) * m_Length2 + index2);
             }
             [WriteAccessRequired]
             set
             {
-                CheckElementWriteAccess(index0, index1);
-                UnsafeUtility.WriteArrayElement(m_Buffer, index0 * m_Length1 + index1, value);
+                CheckElementWriteAccess(index0, index1, index2);
+                UnsafeUtility.WriteArrayElement(m_Buffer, (index0 * m_Length1 + index1) * m_Length2 + index2, value);
             }
         }
 
@@ -147,9 +156,9 @@ namespace Arugula.Collections
         /// </summary>
         /// <param name="array"></param>
         /// <param name="allocator"></param>
-        public NativeArray2D(T[,] array, Allocator allocator)
+        public NativeArray3D(T[,,] array, Allocator allocator)
         {
-            Allocate(array.GetLength(0), array.GetLength(1), allocator, out this);
+            Allocate(array.GetLength(0), array.GetLength(1), array.GetLength(2), allocator, out this);
             Copy(array, this);
         }
 
@@ -158,29 +167,30 @@ namespace Arugula.Collections
         /// </summary>
         /// <param name="array"></param>
         /// <param name="allocator"></param>
-        public NativeArray2D(NativeArray2D<T> array, Allocator allocator)
+        public NativeArray3D(NativeArray3D<T> array, Allocator allocator)
         {
-            Allocate(array.m_Length0, array.m_Length1, allocator, out this);
+            Allocate(array.m_Length0, array.m_Length1, array.m_Length2, allocator, out this);
             Copy(array, this);
         }
 
         /// <summary>
-        /// Creates a 2D array with dimensions [<paramref name="length0"/>, <paramref name="length1"/>].
+        /// Creates a 3D array with dimensions [<paramref name="length0"/>, <paramref name="length1"/>, <paramref name="length2"/>].
         /// </summary>
         /// <param name="length0">The length of the array's first dimension.</param>
         /// <param name="length1">The length of the array's second dimension.</param>
+        /// <param name="length2">The length of the array's third dimension.</param>
         /// <param name="allocator"></param>
         /// <param name="options">Whether to clear the array or leave it uninitialized.</param>
-        public NativeArray2D(int length0, int length1, Allocator allocator, NativeArrayOptions options = NativeArrayOptions.ClearMemory)
+        public NativeArray3D(int length0, int length1, int length2, Allocator allocator, NativeArrayOptions options = NativeArrayOptions.ClearMemory)
         {
-            Allocate(length0, length1, allocator, out this);
+            Allocate(length0, length1, length2, allocator, out this);
             if ((options & NativeArrayOptions.ClearMemory) == NativeArrayOptions.ClearMemory)
             {
                 UnsafeUtility.MemClear(m_Buffer, Length * (long)UnsafeUtility.SizeOf<T>());
             }
         }
 
-        private static void Allocate(int length0, int length1, Allocator allocator, out NativeArray2D<T> array)
+        private static void Allocate(int length0, int length1, int length2, Allocator allocator, out NativeArray3D<T> array)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             CheckAllocator(allocator);
@@ -196,16 +206,20 @@ namespace Arugula.Collections
             if (length1 <= 0)
                 throw new ArgumentOutOfRangeException(nameof(length1), "Length1 must be >= 0.");
 
-            long totalSize = UnsafeUtility.SizeOf<T>() * (long)length0 * (long)length1;
+            if (length2 <= 0)
+                throw new ArgumentOutOfRangeException(nameof(length1), "Length2 must be >= 0.");
+
+            long totalSize = UnsafeUtility.SizeOf<T>() * (long)length0 * (long)length1 * (long)length2;
 
             if (totalSize > int.MaxValue)
-                throw new InvalidOperationException($"Length0 * Length1 * sizeof({typeof(T)}) cannot exceed {int.MaxValue} bytes.");
+                throw new InvalidOperationException($"Length0 * Length1 * Length2 * sizeof({typeof(T)}) cannot exceed {int.MaxValue} bytes.");
 
-            array = new NativeArray2D<T>()
+            array = new NativeArray3D<T>()
             {
                 m_Buffer = UnsafeUtility.Malloc(totalSize, UnsafeUtility.AlignOf<T>(), allocator),
                 m_Length0 = length0,
                 m_Length1 = length1,
+                m_Length2 = length2,
                 m_AllocatorLabel = allocator
             };
 
@@ -220,86 +234,88 @@ namespace Arugula.Collections
         }
 
         [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
-        private void CheckElementReadAccess(int index0, int index1)
+        private void CheckElementReadAccess(int index0, int index1, int index2)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
-            if (!InRange(index0, index1))
+            if (!InRange(index0, index1, index2))
             {
                 throw new IndexOutOfRangeException();
             }
         }
 
         [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
-        private void CheckElementWriteAccess(int index0, int index1)
+        private void CheckElementWriteAccess(int index0, int index1, int index2)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
 
-            if (!InRange(index0, index1))
+            if (!InRange(index0, index1, index2))
             {
                 throw new IndexOutOfRangeException();
             }
         }
 
-        public bool InRange(int index0, int index1)
+        public bool InRange(int index0, int index1, int index2)
         {
-            return (index0 >= 0 && index0 < m_Length0) && (index1 >= 0 && index1 < m_Length1);
+            return (index0 >= 0 && index0 < m_Length0) 
+                && (index1 >= 0 && index1 < m_Length1)
+                && (index2 >= 0 && index2 < m_Length2);
         }
 
         [WriteAccessRequired]
-        public void CopyFrom(NativeArray2D<T> src)
+        public void CopyFrom(NativeArray3D<T> src)
         {
             Copy(src, this);
         }
 
         [WriteAccessRequired]
-        public void CopyFrom(T[,] dst)
+        public void CopyFrom(T[,,] dst)
         {
             Copy(dst, this);
         }
 
-        public void CopyTo(NativeArray2D<T> dst)
+        public void CopyTo(NativeArray3D<T> dst)
         {
             Copy(this, dst);
         }
 
-        public void CopyTo(T[,] dst)
+        public void CopyTo(T[,,] dst)
         {
             Copy(this, dst);
         }
 
-        public T[,] ToArray()
+        public T[,,] ToArray()
         {
-            var array = new T[m_Length0, m_Length1];
+            var array = new T[m_Length0, m_Length1, m_Length2];
             Copy(this, array);
             return array;
         }
 
-        public static void Copy(NativeArray2D<T> src, NativeArray2D<T> dst)
+        public static void Copy(NativeArray3D<T> src, NativeArray3D<T> dst)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(src.m_Safety);
             AtomicSafetyHandle.CheckWriteAndThrow(dst.m_Safety);
 #endif
-            if (src.m_Length0 != dst.m_Length0 || src.m_Length1 != dst.m_Length1)
+            if (src.m_Length0 != dst.m_Length0 || src.m_Length1 != dst.m_Length1 || src.m_Length2 != dst.m_Length2)
             {
-                throw new ArgumentException("Source and destination must have the same lengths.");
+                throw new ArgumentException("Source and destination must have the same dimensions.");
             }
 
             UnsafeUtility.MemCpy(dst.m_Buffer, src.m_Buffer, src.Length * UnsafeUtility.SizeOf<T>());
         }
 
-        public static void Copy(NativeArray2D<T> src, T[,] dst)
+        public static void Copy(NativeArray3D<T> src, T[,,] dst)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(src.m_Safety);
 #endif
             if (src.m_Length0 != dst.GetLength(0) || src.m_Length1 != dst.GetLength(1))
             {
-                throw new ArgumentException("Source and destination must have the same lengths.");
+                throw new ArgumentException("Source and destination must have the same dimensions.");
             }
 
             var handle = GCHandle.Alloc(dst, GCHandleType.Pinned);
@@ -312,14 +328,14 @@ namespace Arugula.Collections
             handle.Free();
         }
 
-        public static void Copy(T[,] src, NativeArray2D<T> dst)
+        public static void Copy(T[,,] src, NativeArray3D<T> dst)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(dst.m_Safety);
 #endif
-            if (src.GetLength(0) != dst.m_Length0 || src.GetLength(1) != dst.m_Length1)
+            if (src.GetLength(0) != dst.m_Length0 || src.GetLength(1) != dst.m_Length1 || src.GetLength(2) != dst.m_Length2)
             {
-                throw new ArgumentException("Source and destination must have the same lengths.");
+                throw new ArgumentException("Source and destination must have the same dimensions.");
             }
 
             var handle = GCHandle.Alloc(src, GCHandleType.Pinned);
@@ -375,14 +391,14 @@ namespace Arugula.Collections
             UnsafeUtility.Free(m_Buffer, m_AllocatorLabel);
 
             m_Buffer = null;
-            m_Length0 = m_Length1 = 0;
+            m_Length0 = m_Length1 = m_Length2 = 0;
         }
 
         public JobHandle Dispose(JobHandle inputDeps)
         {
             if (m_Buffer == null)
             {
-                throw new ObjectDisposedException("The NativeArray2D is already disposed.");
+                throw new ObjectDisposedException("The NativeArray3D is already disposed.");
             }
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -391,9 +407,9 @@ namespace Arugula.Collections
             DisposeSentinel.Clear(ref m_DisposeSentinel);
 #endif
 
-            var jobHandle = new NativeArray2DDisposeJob
+            var jobHandle = new NativeArray3DDisposeJob
             {
-                Data = new NativeArray2DDispose
+                Data = new NativeArray3DDispose
                 {
                     m_Buffer = m_Buffer,
                     m_AllocatorLabel = m_AllocatorLabel,
@@ -407,14 +423,15 @@ namespace Arugula.Collections
             AtomicSafetyHandle.Release(m_Safety);
 #endif
             m_Buffer = null;
-            m_Length0 = m_Length1 = 0;
+            m_Length0 = m_Length1 = m_Length2 = 0;
 
             return jobHandle;
         }
 
-        public bool Equals(NativeArray2D<T> other)
+        public bool Equals(NativeArray3D<T> other)
         {
-            return m_Buffer == other.m_Buffer && m_Length0 == other.m_Length0 && m_Length1 == other.m_Length1;
+            return m_Buffer == other.m_Buffer && m_Length0 == other.m_Length0 
+                && m_Length1 == other.m_Length1 && m_Length2 == other.m_Length2;
         }
 
         public IEnumerator<T> GetEnumerator()
@@ -436,23 +453,23 @@ namespace Arugula.Collections
         }
     }
 
-    internal unsafe sealed class NativeArray2DDebugView<T> where T : struct
+    internal unsafe sealed class NativeArray3DDebugView<T> where T : struct
     {
-        private readonly NativeArray2D<T> m_Array;
+        private readonly NativeArray3D<T> m_Array;
 
-        public NativeArray2DDebugView(NativeArray2D<T> array)
+        public NativeArray3DDebugView(NativeArray3D<T> array)
         {
             m_Array = array;
         }
 
-        public T[,] Items
+        public T[,,] Items
         {
             get => m_Array.ToArray();
         }
     }
 
     [NativeContainer]
-    internal unsafe struct NativeArray2DDispose
+    internal unsafe struct NativeArray3DDispose
     {
         [NativeDisableUnsafePtrRestriction]
         internal void* m_Buffer;
@@ -470,9 +487,9 @@ namespace Arugula.Collections
     }
 
     [BurstCompile]
-    struct NativeArray2DDisposeJob : IJob
+    struct NativeArray3DDisposeJob : IJob
     {
-        public NativeArray2DDispose Data;
+        public NativeArray3DDispose Data;
 
         public void Execute()
         {
