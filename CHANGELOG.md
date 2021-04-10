@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2021-04-09
+### Added
+- Added NativeArray3D native collection
+- Added NativeHeap.IsCreated property
+### Fixed
+- Fixed NativeHeap.PushPop and Replace
+- Fixed NativePtr.Dispose not setting the ptr to null on dispose.
+
 ## [0.4.2] - 2021-01-22
 ### Changed
 - Changed NativeStack into proper namespace
