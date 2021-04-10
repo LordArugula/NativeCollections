@@ -368,7 +368,6 @@ namespace Arugula.Collections
         public void Dispose()
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-
             CheckAllocator(m_AllocatorLabel);
 
             DisposeSentinel.Dispose(ref m_Safety, ref m_DisposeSentinel);
@@ -381,7 +380,14 @@ namespace Arugula.Collections
 
         public JobHandle Dispose(JobHandle inputDeps)
         {
+            if (m_Buffer == null)
+            {
+                throw new ObjectDisposedException("The NativeArray2D is already disposed.");
+            }
+
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            CheckAllocator(m_AllocatorLabel);
+
             DisposeSentinel.Clear(ref m_DisposeSentinel);
 #endif
 
@@ -401,6 +407,7 @@ namespace Arugula.Collections
             AtomicSafetyHandle.Release(m_Safety);
 #endif
             m_Buffer = null;
+            m_Length0 = m_Length1 = 0;
 
             return jobHandle;
         }
@@ -427,7 +434,6 @@ namespace Arugula.Collections
             if (allocator <= Allocator.None)
                 throw new ArgumentException("Allocator must be Temp, TempJob or Persistent", nameof(allocator));
         }
-
     }
 
     internal unsafe sealed class NativeArray2DDebugView<T> where T : struct

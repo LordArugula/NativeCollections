@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -8,322 +6,289 @@ namespace Arugula.Collections.Tests
 {
     internal class NativeArray2DTests
     {
-        [Test]
-        public void LengthEquals_Length0xLength1()
-        {
-            var array = new NativeArray2D<int>(5, 3, Unity.Collections.Allocator.Temp);
+        const int length = 1 << 6;
+        const int width = 1 << 6;
 
-            Assert.AreEqual(5 * 3, array.Length);
+        [Test]
+        public void Length()
+        {
+            var array = new NativeArray2D<int>(length, width, Unity.Collections.Allocator.Temp);
+
+            Assert.AreEqual(length * width, array.Length);
             array.Dispose();
         }
 
         [Test]
-        public void SetInBounds_DoesNotThrow()
+        public void Dispose()
         {
-            var array = new NativeArray2D<int>(5, 3, Unity.Collections.Allocator.Temp);
-            for (int x = 0; x < 5; x++)
+            var array = new NativeArray2D<int>(length, width, Unity.Collections.Allocator.Temp);
+
+            Assert.IsTrue(array.IsCreated);
+            array.Dispose();
+
+            Assert.Throws<System.ObjectDisposedException>(() =>
             {
-                for (int y = 0; y < 3; y++)
-                {
-                    Assert.DoesNotThrow(() => { array[x, y] = x * y; });
-                    Assert.AreEqual(array[x, y], x * y);
-                }
-            }
+                array[0, 0] = 10;
+            });
 
-            array.Dispose();
+            Assert.False(array.IsCreated);
+
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                array.Dispose();
+            });
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                array.Dispose(default);
+            });
+
+            array = new NativeArray2D<int>(length, width, Unity.Collections.Allocator.TempJob);
+            Assert.IsTrue(array.IsCreated);
+
+            array.Dispose(default);
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                array.Dispose();
+            });
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                array.Dispose(default);
+            });
         }
 
         [Test]
-        public void SetOutOfBounds_Throws()
+        public void Range()
         {
-            var array = new NativeArray2D<int>(5, 3, Unity.Collections.Allocator.Temp);
-
-            Assert.Throws<IndexOutOfRangeException>(() => { array[5, -1] = 10; });
-
-            array.Dispose();
-        }
-
-        [Test]
-        public void GetOutOfBounds_Throws()
-        {
-            var array = new NativeArray2D<int>(5, 3, Unity.Collections.Allocator.Temp);
-
-            Assert.Throws<IndexOutOfRangeException>(() => { int outOfBounds = array[5, -1]; });
-            array.Dispose();
-        }
-
-        [Test]
-        public void EnumerateDoesNotThrow()
-        {
-            var array = new NativeArray2D<int>(5, 3, Unity.Collections.Allocator.Temp);
+            var array = new NativeArray2D<int>(length, width, Unity.Collections.Allocator.Temp);
 
             Assert.DoesNotThrow(() =>
             {
-                for (int x = 0; x < 5; x++)
-                {
-                    for (int y = 0; y < 3; y++)
-                    {
-                        array[x, y] = x * 3 + y;
-                    }
-                }
-
-                int i = 0;
-                foreach (var item in array)
-                {
-                    Assert.AreEqual(i++, item);
-                }
-                Assert.AreEqual(array.Length, i);
+                array[0, 0] = 1;
+                array[0, width - 1] = 1;
+                array[length - 1, 0] = 1;
+                array[length - 1, width - 1] = 10;
             });
+
+            Assert.Throws<System.IndexOutOfRangeException>(() =>
+            {
+                array[-1, 0] = 1;
+            });
+
+            Assert.Throws<System.IndexOutOfRangeException>(() =>
+            {
+                array[0, -1] = 1;
+            });
+
+            Assert.Throws<System.IndexOutOfRangeException>(() =>
+            {
+                array[length, 0] = 1;
+            });
+
+            Assert.Throws<System.IndexOutOfRangeException>(() =>
+            {
+                array[0, width] = 1;
+            });
+
             array.Dispose();
         }
 
         [Test]
-        public void EnumeratesSameOrderAsManaged2DArray()
+        public void IndexOrder()
         {
-            const int width = 100;
-            const int height = 100;
-            float[,] managedArray = new float[width, height];
-            int i = 0;
-            for (int x = 0; x < width; x++)
+            var array = new NativeArray2D<int>(length, width, Unity.Collections.Allocator.Temp);
+            int n = 0;
+            for (int x = 0; x < length; x++)
             {
-                for (int y = 0; y < height; y++)
+                for (int y = 0; y < width; y++)
                 {
-                    managedArray[x, y] = i++;
+                    Assert.AreEqual(n, x * width + y);
+                    array[x, y] = n++;
                 }
             }
 
-            i = 0;
-            foreach (var item in managedArray)
+            n = 0;
+            foreach (var item in array)
             {
-                Assert.AreEqual(i++, item);
+                Assert.AreEqual(n++, item);
             }
 
-            i = 0;
-            NativeArray2D<float> nativeArray = new NativeArray2D<float>(managedArray, Unity.Collections.Allocator.Temp);
+            array.Dispose();
+        }
+
+        [Test]
+        public void CopyFrom()
+        {
+            var src = new int[length, width];
+            for (int x = 0, n = 0; x < length; x++)
+            {
+                for (int y = 0; y < width; y++, n++)
+                {
+                    src[x, y] = n;
+                }
+            }
+
+            var dstA = new NativeArray2D<int>(length, width, Unity.Collections.Allocator.Temp);
+            dstA.CopyFrom(src);
+            Assert.AreEqual(src.GetLength(0), dstA.Length0);
+            Assert.AreEqual(src.GetLength(1), dstA.Length1);
+            Assert.AreEqual(src.Length, dstA.Length);
+
+            var dstB = new NativeArray2D<int>(src, Unity.Collections.Allocator.Temp);
+            Assert.AreEqual(src.GetLength(0), dstB.Length0);
+            Assert.AreEqual(src.GetLength(1), dstB.Length1);
+            Assert.AreEqual(src.Length, dstB.Length);
+
+            var dstC = new NativeArray2D<int>(dstA, Unity.Collections.Allocator.Temp);
+            Assert.AreEqual(src.GetLength(0), dstC.Length0);
+            Assert.AreEqual(src.GetLength(1), dstC.Length1);
+            Assert.AreEqual(src.Length, dstC.Length);
+
+            for (int x = 0; x < length; x++)
+            {
+                for (int y = 0; y < width; y++)
+                {
+                    Assert.AreEqual(src[x, y], dstA[x, y]);
+                    Assert.AreEqual(src[x, y], dstB[x, y]);
+                    Assert.AreEqual(src[x, y], dstC[x, y]);
+                }
+            }
+
+            dstA.Dispose();
+            dstB.Dispose();
+            dstC.Dispose();
+        }
+
+        [Test]
+        public void CopyTo()
+        {
+            var src = new NativeArray2D<int>(length, width, Unity.Collections.Allocator.Temp);
+            for (int x = 0, n = 0; x < length; x++)
+            {
+                for (int y = 0; y < width; y++, n++)
+                {
+                    Assert.AreEqual(n, x * width + y);
+                    src[x, y] = n;
+                }
+            }
+
+            var dstA = new int[length, width];
+            src.CopyTo(dstA);
+            Assert.AreEqual(src.Length0, dstA.GetLength(0));
+            Assert.AreEqual(src.Length1, dstA.GetLength(1));
+            Assert.AreEqual(src.Length, dstA.Length);
+
+            var dstB = new NativeArray2D<int>(dstA, Unity.Collections.Allocator.Temp);
+            Assert.AreEqual(src.Length0, dstB.Length0);
+            Assert.AreEqual(src.Length1, dstB.Length1);
+            Assert.AreEqual(src.Length, dstB.Length);
+
+            for (int x = 0; x < length; x++)
+            {
+                for (int y = 0; y < width; y++)
+                {
+                    Assert.AreEqual(src[x, y], dstA[x, y]);
+                    Assert.AreEqual(src[x, y], dstB[x, y]);
+                }
+            }
+
+            src.Dispose();
+            dstB.Dispose();
+        }
+
+        [Test]
+        public void Enumerator()
+        {
+            var nativeArray = new NativeArray2D<int>(length, width, Unity.Collections.Allocator.Temp);
+            var managedArray = new int[length, width];
+            int n = 0;
+            for (int x = 0; x < length; x++)
+            {
+                for (int y = 0; y < width; y++, n++)
+                {
+                    nativeArray[x, y] = n;
+                    managedArray[x, y] = n;
+                }
+            }
+
+            n = 0;
             foreach (var item in nativeArray)
             {
-                Assert.AreEqual(i++, item);
+                Assert.AreEqual(n++, item);
             }
+
+            n = 0;
+            foreach (var item in managedArray)
+            {
+                Assert.AreEqual(n++, item);
+            }
+
+            nativeArray.Dispose();
         }
 
         [Test]
-        public void CopyToNativeArray2D()
+        public void Flatten()
         {
-            var src = new NativeArray2D<int>(10, 3, Unity.Collections.Allocator.Temp);
+            var src = new NativeArray2D<int>(length, width, Unity.Collections.Allocator.Temp);
 
-            int count = 0;
-            for (int x = 0; x < 10; x++)
+            for (int x = 0, n = 0; x < length; x++)
             {
-                for (int y = 0; y < 3; y++)
+                for (int y = 0; y < width; y++, n++)
                 {
-                    src[x, y] = count++;
-                }
-            }
-            var dst = new NativeArray2D<int>(10, 3, Unity.Collections.Allocator.Temp);
-            src.CopyTo(dst);
-
-            count = 0;
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 3; y++)
-                {
-                    Assert.AreEqual(count++, dst[x, y]);
-                    Assert.AreEqual(src[x, y], dst[x, y]);
+                    src[x, y] = n;
                 }
             }
 
-            Assert.AreEqual(src.Length0, dst.Length0);
-            Assert.AreEqual(src.Length1, dst.Length1);
+            int[] managedArr = src.Flatten();
+            Unity.Collections.NativeArray<int> nativeArr = src.Flatten(Unity.Collections.Allocator.Temp);
+
+            Assert.AreEqual(src.Length, managedArr.Length);
+            Assert.AreEqual(nativeArr.Length, managedArr.Length);
+
+            for (int x = 0, n = 0; x < length; x++)
+            {
+                for (int y = 0; y < width; y++, n++)
+                {
+                    Assert.AreEqual(n, managedArr[n]);
+                    Assert.AreEqual(n, nativeArr[n]);
+                }
+            }
 
             src.Dispose();
-            dst.Dispose();
-        }
-
-        [Test]
-        public void CopyFromNativeArray2D()
-        {
-            var src = new NativeArray2D<int>(10, 3, Unity.Collections.Allocator.Temp);
-
-            int count = 0;
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 3; y++)
-                {
-                    src[x, y] = count++;
-                }
-            }
-            var dst = new NativeArray2D<int>(10, 3, Unity.Collections.Allocator.Temp);
-            dst.CopyFrom(src);
-
-            count = 0;
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 3; y++)
-                {
-                    Assert.AreEqual(count++, dst[x, y]);
-                    Assert.AreEqual(src[x, y], dst[x, y]);
-                }
-            }
-
-            Assert.AreEqual(src.Length0, dst.Length0);
-            Assert.AreEqual(src.Length1, dst.Length1);
-
-            src.Dispose();
-            dst.Dispose();
-        }
-
-        [Test]
-        public void CopyFromArray2D()
-        {
-            var src = new int[10, 3];
-
-            int count = 0;
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 3; y++)
-                {
-                    src[x, y] = count++;
-                }
-            }
-            var dst = new NativeArray2D<int>(10, 3, Unity.Collections.Allocator.Temp);
-            dst.CopyFrom(src);
-
-            count = 0;
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 3; y++)
-                {
-                    Assert.AreEqual(count++, dst[x, y]);
-                    Assert.AreEqual(src[x, y], dst[x, y]);
-                }
-            }
-
-            Assert.AreEqual(src.GetLength(0), dst.Length0);
-            Assert.AreEqual(src.GetLength(1), dst.Length1);
-
-            dst.Dispose();
-        }
-
-        [Test]
-        public void CopyToArray2D()
-        {
-            var src = new NativeArray2D<int>(10, 3, Unity.Collections.Allocator.Temp);
-
-            int count = 0;
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 3; y++)
-                {
-                    src[x, y] = count++;
-                }
-            }
-            var dst = new int[10, 3];
-            src.CopyTo(dst);
-
-            count = 0;
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 3; y++)
-                {
-                    Assert.AreEqual(count++, dst[x, y]);
-                    Assert.AreEqual(src[x, y], dst[x, y]);
-                }
-            }
-
-            Assert.AreEqual(src.Length0, dst.GetLength(0));
-            Assert.AreEqual(src.Length1, dst.GetLength(1));
-
-            src.Dispose();
+            nativeArr.Dispose();
         }
 
         [Test]
         public void ToArray()
         {
-            var src = new NativeArray2D<int>(10, 3, Unity.Collections.Allocator.Temp);
+            var src = new NativeArray2D<int>(length, width, Unity.Collections.Allocator.Temp);
 
-            int count = 0;
-            for (int x = 0; x < 10; x++)
+            for (int x = 0, n = 0; x < length; x++)
             {
-                for (int y = 0; y < 3; y++)
+                for (int y = 0; y < width; y++, n++)
                 {
-                    src[x, y] = count++;
+                    src[x, y] = n;
                 }
             }
 
-            var array = src.ToArray();
-            count = 0;
-            for (int x = 0; x < 10; x++)
+            var output = src.ToArray();
+            Assert.AreEqual(src.Length0, output.GetLength(0));
+            Assert.AreEqual(src.Length1, output.GetLength(1));
+            Assert.AreEqual(src.Length, output.Length);
+
+            for (int x = 0; x < length; x++)
             {
-                for (int y = 0; y < 3; y++)
+                for (int y = 0; y < width; y++)
                 {
-                    Assert.AreEqual(array[x, y], src[x, y]);
-                    Assert.AreEqual(array[x, y], count++);
-                }
-            }
-
-            src.Dispose();
-        }
-
-        [Test]
-        public void CreateFromNativeArray()
-        {
-            var src = new NativeArray2D<int>(10, 3, Unity.Collections.Allocator.Temp);
-
-            int count = 0;
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 3; y++)
-                {
-                    src[x, y] = count++;
-                }
-            }
-
-            var dst = new NativeArray2D<int>(src, Unity.Collections.Allocator.Temp);
-            count = 0;
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 3; y++)
-                {
-                    Assert.AreEqual(dst[x, y], src[x, y]);
-                    Assert.AreEqual(dst[x, y], count++);
+                    Assert.AreEqual(src[x, y], output[x, y]);
                 }
             }
 
             src.Dispose();
-            dst.Dispose();
-        }
-
-        [Test]
-        public void CreateFromArray()
-        {
-            var src = new int[10, 3];
-
-            int count = 0;
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 3; y++)
-                {
-                    src[x, y] = count++;
-                }
-            }
-
-            var dst = new NativeArray2D<int>(src, Unity.Collections.Allocator.Temp);
-            count = 0;
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 3; y++)
-                {
-                    Assert.AreEqual(dst[x, y], src[x, y]);
-                    Assert.AreEqual(dst[x, y], count++);
-                }
-            }
-
-            dst.Dispose();
         }
 
         public struct ManagedStructTest
         {
-            public string managedVar;
+            public GameObject gameObject;
         }
 
         [Test]
@@ -335,52 +300,6 @@ namespace Arugula.Collections.Tests
 
                 array.Dispose();
             });
-        }
-
-        [Test]
-        public void FlattensToManagedArray()
-        {
-            var nativeArray2D = new NativeArray2D<float>(10, 10, Unity.Collections.Allocator.Temp);
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 10; y++)
-                {
-                    nativeArray2D[x, y] = x;
-                }
-            }
-
-            var flattenedArray = nativeArray2D.Flatten();
-
-            Assert.AreEqual(nativeArray2D.Length, flattenedArray.Length);
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 10; y++)
-                {
-                    Assert.AreEqual(flattenedArray[x * 10 + y], nativeArray2D[x, y]);
-                }
-            }
-        }
-
-        [Test]
-        public void FlattensToNativeArray()
-        {
-            var nativeArray2D = new NativeArray2D<float>(10, 10, Unity.Collections.Allocator.Temp);
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 10; y++)
-                {
-                    nativeArray2D[x, y] = x;
-                }
-            }
-
-            var flattenedArray = nativeArray2D.Flatten(Unity.Collections.Allocator.Temp);
-
-            Assert.AreEqual(nativeArray2D.Length, flattenedArray.Length);
-            int i = 0;
-            foreach (var item in nativeArray2D)
-            {
-                Assert.AreEqual(flattenedArray[i++], item);
-            }
         }
     }
 }

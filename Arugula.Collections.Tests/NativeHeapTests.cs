@@ -10,16 +10,16 @@ namespace Arugula.Collections.Tests
         [Test]
         public void IsEmpty()
         {
-            var heap = new NativeHeap<int>(0, Allocator.Persistent);
+            var heap = new NativeHeap<int>(0, Allocator.Temp);
             Assert.IsTrue(heap.IsEmpty);
 
             heap.Push(0);
+            heap.Push(10);
             Assert.IsFalse(heap.IsEmpty);
 
             heap.Pop();
-            Assert.IsTrue(heap.IsEmpty);
+            Assert.IsFalse(heap.IsEmpty);
 
-            heap.Push(0);
             heap.Clear();
             Assert.IsTrue(heap.IsEmpty);
 
@@ -27,137 +27,33 @@ namespace Arugula.Collections.Tests
         }
 
         [Test]
-        public void Create_HasZeroLength()
+        public void Push()
         {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-            Assert.IsTrue(heap.Count == 0);
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushIncrementsCount()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
+            var heap = new NativeHeap<int>(Allocator.Temp);
 
             heap.Push(5);
             Assert.IsTrue(heap.Count == 1);
-            heap.Dispose();
-        }
 
-        [Test]
-        public void PushOneAndThree_IsSorted()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(1);
-            heap.Push(3);
-            Assert.AreEqual(1, heap.Peek());
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushThreeAndOne_IsSorted()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(3);
-            heap.Push(1);
-            Assert.AreEqual(1, heap.Peek());
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushFive_RootIsFive()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(5);
+            heap.Push(10);
+            Assert.IsTrue(heap.Count == 2);
             Assert.AreEqual(5, heap.Peek());
 
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushDuplicate_ContainsDuplicate()
-        {
-            var heap = new NativeHeap<int>(5, Allocator.Persistent);
-
-            heap.PushNoResize(1);
-            heap.PushNoResize(1);
-
-            Assert.AreEqual(2, heap.Count);
-            heap.Dispose();
-        }
-
-
-        [Test]
-        public void PushDuplicate_RemainsSorted()
-        {
-            var heap = new NativeHeap<int>(5, Allocator.Persistent);
-
-            heap.PushNoResize(1);
-            heap.PushNoResize(3);
-            heap.PushNoResize(2);
-            heap.PushNoResize(5);
-            heap.PushNoResize(1);
-
-            Assert.AreEqual(1, heap.Pop());
-            Assert.AreEqual(1, heap.Pop());
-            Assert.AreEqual(2, heap.Pop());
-            Assert.AreEqual(3, heap.Pop());
-            Assert.AreEqual(5, heap.Pop());
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushAndPop_RemainsSorted()
-        {
-            var heap = new NativeHeap<int>(5, Allocator.Persistent);
-
-            heap.PushNoResize(5);
-            heap.PushNoResize(3);
-            heap.PushNoResize(1);
-            heap.Pop();
-
-            heap.PushNoResize(4);
-            heap.PushNoResize(2);
-
-            Assert.AreEqual(2, heap.Pop());
-            Assert.AreEqual(3, heap.Pop());
-            Assert.AreEqual(4, heap.Pop());
-            Assert.AreEqual(5, heap.Pop());
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PopRemovesRoot()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
             heap.Push(3);
-            heap.Push(1);
-            Assert.AreEqual(1, heap.Pop());
+            Assert.IsTrue(heap.Count == 3);
+            Assert.AreEqual(3, heap.Peek());
+
             heap.Dispose();
         }
 
         [Test]
-        public void PopDecrementsCount()
+        public void Pop()
         {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
+            var heap = new NativeHeap<int>(Allocator.Temp);
 
-            heap.Push(1);
-            Assert.AreEqual(1, heap.Pop());
-            heap.Dispose();
-        }
-
-        [Test]
-        public void Pop_RemainsSorted()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
+            Assert.Throws<System.InvalidOperationException>(() =>
+            {
+                heap.Pop();
+            });
 
             heap.Push(6);
             heap.Push(1);
@@ -166,30 +62,24 @@ namespace Arugula.Collections.Tests
             heap.Push(5);
 
             Assert.AreEqual(1, heap.Pop());
+            Assert.IsFalse(heap.IsEmpty);
             Assert.AreEqual(2, heap.Pop());
             Assert.AreEqual(4, heap.Pop());
             Assert.AreEqual(5, heap.Pop());
             Assert.AreEqual(6, heap.Pop());
+
+            Assert.IsTrue(heap.IsEmpty);
+
             heap.Dispose();
         }
 
         [Test]
-        public void CreateFromArray_HasSameCount()
+        public void CreateFromArray()
         {
             var array = new int[] { 1, 5, 2, 3, 4 };
-            var heap = new NativeHeap<int>(array, Allocator.Persistent);
+            var heap = new NativeHeap<int>(array, Allocator.Temp);
 
             Assert.AreEqual(array.Length, heap.Count);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void CreateFromArray_IsSorted()
-        {
-            var array = new int[] { 1, 5, 2, 3, 4 };
-            var heap = new NativeHeap<int>(array, Allocator.Persistent);
-
             Assert.AreEqual(1, heap.Pop());
             Assert.AreEqual(2, heap.Pop());
             Assert.AreEqual(3, heap.Pop());
@@ -197,215 +87,83 @@ namespace Arugula.Collections.Tests
             Assert.AreEqual(5, heap.Pop());
 
             heap.Dispose();
-        }
 
-        [Test]
-        public void CreateFromNativeArray_IsSorted()
-        {
-            var nativeArray = new NativeArray<int>(new int[] { 1, 5, 2, 3, 4 }, Allocator.Persistent);
-            var heap = new NativeHeap<int>(nativeArray, Allocator.Persistent);
+            var nativeArray = new NativeArray<int>(new int[] { 1, 5, 2, 3, 4 }, Allocator.Temp);
+            heap = new NativeHeap<int>(nativeArray, Allocator.Temp);
 
+            Assert.AreEqual(array.Length, heap.Count);
             Assert.AreEqual(1, heap.Pop());
             Assert.AreEqual(2, heap.Pop());
             Assert.AreEqual(3, heap.Pop());
             Assert.AreEqual(4, heap.Pop());
             Assert.AreEqual(5, heap.Pop());
 
+            heap.Dispose();
             nativeArray.Dispose();
-            heap.Dispose();
         }
 
         [Test]
-        public void CreateFromNativeArray_HasSameCount()
+        public void Peek()
         {
-            var nativeArray = new NativeArray<int>(new int[] { 1, 5, 2, 3, 4 }, Allocator.Persistent);
-            var heap = new NativeHeap<int>(nativeArray, Allocator.Persistent);
+            var heap = new NativeHeap<int>(Allocator.Temp);
 
-            Assert.AreEqual(nativeArray.Length, heap.Count);
+            Assert.Throws<InvalidOperationException>(() => heap.Peek());
 
-            nativeArray.Dispose();
-            heap.Dispose();
-        }
+            heap.Push(10);
+            Assert.AreEqual(10, heap.Peek());
 
-        [Test]
-        public void Push12345_Contains12345()
-        {
-            var heap = new NativeHeap<int>(5, Allocator.Persistent);
+            heap.Push(3);
+            Assert.AreEqual(3, heap.Peek());
 
-            heap.PushNoResize(4);
-            heap.PushNoResize(1);
-            heap.PushNoResize(3);
-            heap.PushNoResize(5);
-            heap.PushNoResize(2);
+            heap.Push(5);
+            Assert.AreEqual(3, heap.Peek());
 
-            Assert.IsTrue(heap.Contains(4));
-            Assert.IsTrue(heap.Contains(1));
-            Assert.IsTrue(heap.Contains(3));
-            Assert.IsTrue(heap.Contains(5));
-            Assert.IsTrue(heap.Contains(2));
-            heap.Dispose();
-        }
+            heap.Pop();
+            Assert.AreEqual(5, heap.Peek());
 
-        [Test]
-        public void Push12345_DoesNotContain6()
-        {
-            var heap = new NativeHeap<int>(5, Allocator.Persistent);
+            heap.Pop();
+            Assert.AreEqual(10, heap.Peek());
 
-            heap.PushNoResize(4);
-            heap.PushNoResize(1);
-            heap.PushNoResize(3);
-            heap.PushNoResize(5);
-            heap.PushNoResize(2);
-
-            Assert.IsFalse(heap.Contains(6));
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PopFromEmptyHeapThrows()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            Assert.Throws<InvalidOperationException>(() => heap.Pop());
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PeekFromEmptyHeapThrows()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
+            heap.Pop();
             Assert.Throws<InvalidOperationException>(() => heap.Peek());
 
             heap.Dispose();
         }
 
         [Test]
-        public void PushPop_DoesNotChangeCount()
+        public void PushPop()
         {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
+            var heap = new NativeHeap<int>(Allocator.Temp);
 
-            heap.Push(3);
-            heap.PushPop(5);
+            Assert.DoesNotThrow(() => heap.PushPop(3));
+            Assert.IsTrue(heap.Count == 0);
 
-            Assert.IsTrue(heap.Count == 1);
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushPopHigherValue_RemovesRoot()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(3);
             heap.Push(2);
-            heap.Push(5);
+            heap.Push(4);
+            heap.Push(6);
 
-            heap.PushPop(4);
+            Assert.AreEqual(1, heap.PushPop(1));
+            Assert.IsTrue(heap.Count == 3);
+            Assert.AreEqual(2, heap.Peek());
 
-            Assert.IsFalse(heap.Contains(2));
-            heap.Dispose();
-        }
+            Assert.AreEqual(2, heap.PushPop(7));
+            Assert.IsTrue(heap.Count == 3);
+            Assert.AreEqual(4, heap.Peek());
 
-        [Test]
-        public void PushPopLowerValue_RemovesRoot()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
+            Assert.AreEqual(4, heap.PushPop(5));
 
-            heap.Push(3);
-            heap.Push(2);
-            heap.Push(5);
-
-            heap.PushPop(1);
-
-            Assert.IsFalse(heap.Contains(1));
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushPopHigherValue_AddsHigherValue()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(3);
-            heap.Push(2);
-            heap.Push(5);
-
-            heap.PushPop(4);
-
-            Assert.IsTrue(heap.Contains(4));
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushPopLowerValueDoesNotChangeHeap()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(3);
-            heap.Push(2);
-            heap.Push(5);
-
-            heap.PushPop(1);
-
-            Assert.AreEqual(2, heap.Pop());
-            Assert.AreEqual(3, heap.Pop());
             Assert.AreEqual(5, heap.Pop());
-
+            Assert.AreEqual(6, heap.Pop());
+            Assert.AreEqual(7, heap.Pop());
             heap.Dispose();
         }
 
         [Test]
-        public void PushPopEmptyHeapDoesNotThrow()
+        public void Replace()
         {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
+            var heap = new NativeHeap<int>(Allocator.Temp);
 
-            Assert.DoesNotThrow(() => heap.PushPop(1));
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void Replace_DoesNotChangeCount()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(3);
-            heap.Replace(5);
-
-            Assert.IsTrue(heap.Count == 1);
-            heap.Dispose();
-        }
-
-        [Test]
-        public void Replace_RemovesRoot()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(3);
-            heap.Replace(5);
-
-            Assert.IsFalse(heap.Contains(3));
-            heap.Dispose();
-        }
-
-        [Test]
-        public void Replace_AddsReplacement()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(3);
-            heap.Replace(5);
-
-            Assert.IsTrue(heap.Contains(5));
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ReplaceWithHigherValue_IsSorted()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
+            Assert.Throws<IndexOutOfRangeException>(() => heap.Replace(1));
 
             heap.Push(3);
             heap.Push(1);
@@ -413,9 +171,15 @@ namespace Arugula.Collections.Tests
             heap.Push(5);
             heap.Push(2);
 
-            heap.Replace(7);
+            Assert.AreEqual(1, heap.Replace(7));
+            Assert.AreEqual(2, heap.Peek());
+            Assert.IsTrue(heap.Count == 5);
 
-            Assert.AreEqual(2, heap.Pop());
+            Assert.AreEqual(2, heap.Replace(1));
+            Assert.AreEqual(1, heap.Peek());
+            Assert.IsTrue(heap.Count == 5);
+
+            Assert.AreEqual(1, heap.Pop());
             Assert.AreEqual(3, heap.Pop());
             Assert.AreEqual(4, heap.Pop());
             Assert.AreEqual(5, heap.Pop());
@@ -425,129 +189,49 @@ namespace Arugula.Collections.Tests
         }
 
         [Test]
-        public void ReplaceWithLowerValue_IsSorted()
+        public void ToArray()
         {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(10);
-            heap.Push(8);
-            heap.Push(12);
-            heap.Push(13);
-            heap.Push(9);
-            heap.Replace(3);
-
-            Assert.AreEqual(3, heap.Pop());
-            Assert.AreEqual(9, heap.Pop());
-            Assert.AreEqual(10, heap.Pop());
-            Assert.AreEqual(12, heap.Pop());
-            Assert.AreEqual(13, heap.Pop());
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ReplaceWithMedianValue_IsSorted()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(10);
-            heap.Push(8);
-            heap.Push(12);
-            heap.Push(13);
-            heap.Push(9);
-            heap.Replace(11);
-
-            Assert.AreEqual(9, heap.Pop());
-            Assert.AreEqual(10, heap.Pop());
-            Assert.AreEqual(11, heap.Pop());
-            Assert.AreEqual(12, heap.Pop());
-            Assert.AreEqual(13, heap.Pop());
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ReplaceEmptyHeapThrows()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            Assert.Throws<IndexOutOfRangeException>(() => heap.Replace(1));
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ToArrayReturnsArrayWithSameCount()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(10);
-            heap.Push(8);
-            heap.Push(12);
-            heap.Push(13);
-            heap.Push(9);
+            var input = new int[] { 10, 8, 12, 13, 9 };
+            var heap = new NativeHeap<int>(input, Allocator.Temp);
 
             int[] array = heap.ToArray();
             Assert.AreEqual(array.Length, heap.Count);
 
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ToArrayReturnsArrayWithSameElements()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(10);
-            heap.Push(8);
-            heap.Push(12);
-            heap.Push(13);
-            heap.Push(9);
-
-            int[] array = heap.ToArray();
-            Assert.AreEqual(array.Length, heap.Count);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void EmptyHeapToArrayReturnsEmptyArray()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            int[] array = heap.ToArray();
-            Assert.AreEqual(0, array.Length);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ToNativeArrayReturnsNativeArrayWithSameCount()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
-
-            heap.Push(10);
-            heap.Push(8);
-            heap.Push(12);
-            heap.Push(13);
-            heap.Push(9);
-
-            NativeArray<int> nativeArray = heap.ToNativeArray(Allocator.Persistent);
+            NativeArray<int> nativeArray = heap.ToArray(Allocator.Temp);
             Assert.AreEqual(nativeArray.Length, heap.Count);
 
+            for (int i = 0; i < input.Length; i++)
+            {
+                Assert.That(() =>
+                {
+                    for (int j = 0; j < array.Length; j++)
+                    {
+                        if (array[j] == input[i]) return true;
+                    }
+                    return false;
+                });
+
+                Assert.That(() =>
+                {
+                    for (int j = 0; j < array.Length; j++)
+                    {
+                        if (nativeArray[j] == input[i]) return true;
+                    }
+                    return false;
+                });
+            }
+
             nativeArray.Dispose();
             heap.Dispose();
-        }
 
-        [Test]
-        public void EmptyHeapToNativeArrayReturnsEmptyNativeArray()
-        {
-            var heap = new NativeHeap<int>(Allocator.Persistent);
+            heap = new NativeHeap<int>(Allocator.Temp);
 
-            NativeArray<int> nativeArray = heap.ToNativeArray(Allocator.Persistent);
-            Assert.AreEqual(0, nativeArray.Length);
+            array = heap.ToArray();
+            Assert.AreEqual(0, array.Length);
 
-            nativeArray.Dispose();
+            nativeArray = heap.ToArray(Allocator.Temp);
+            Assert.AreEqual(0, array.Length);
+
             heap.Dispose();
         }
 
@@ -601,6 +285,41 @@ namespace Arugula.Collections.Tests
                 heap.Dispose();
             });
         }
+
+        [Test]
+        public void Dispose()
+        {
+            var heap = new NativeHeap<int>(Allocator.Temp);
+
+            Assert.IsTrue(heap.IsCreated);
+            heap.Dispose();
+            
+            Assert.IsFalse(heap.IsCreated);
+
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                heap.Dispose();
+            });
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                heap.Dispose(default);
+            });
+
+            heap = new NativeHeap<int>(Allocator.TempJob);
+            Assert.IsTrue(heap.IsCreated);
+
+            heap.Dispose(new JobHandle());
+            Assert.IsFalse(heap.IsCreated);
+
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                heap.Dispose();
+            });
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                heap.Dispose(default);
+            });
+        }
     }
 
     internal class NativeHeapTValueTPriorityTests
@@ -608,16 +327,16 @@ namespace Arugula.Collections.Tests
         [Test]
         public void IsEmpty()
         {
-            var heap = new NativeHeap<int, int>(0, Allocator.Persistent);
+            var heap = new NativeHeap<int, int>(Allocator.Temp);
             Assert.IsTrue(heap.IsEmpty);
 
             heap.Push(0, 0);
+            heap.Push(10, 10);
             Assert.IsFalse(heap.IsEmpty);
 
             heap.Pop();
-            Assert.IsTrue(heap.IsEmpty);
+            Assert.IsFalse(heap.IsEmpty);
 
-            heap.Push(0, 0);
             heap.Clear();
             Assert.IsTrue(heap.IsEmpty);
 
@@ -625,137 +344,33 @@ namespace Arugula.Collections.Tests
         }
 
         [Test]
-        public void Create_HasZeroLength()
+        public void Push()
         {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-            Assert.IsTrue(heap.Count == 0);
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushIncrementsCount()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
+            var heap = new NativeHeap<int, int>(Allocator.Temp);
 
             heap.Push(5, 5);
             Assert.IsTrue(heap.Count == 1);
-            heap.Dispose();
-        }
 
-        [Test]
-        public void PushOneAndThree_IsSorted()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(1, 1);
-            heap.Push(3, 3);
-            Assert.AreEqual(1, heap.Peek().value);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushThreeAndOne_IsSorted()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(3, 3);
-            heap.Push(1, 1);
-            Assert.AreEqual(1, heap.Peek().value);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushFive_RootIsFive()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(5, 5);
+            heap.Push(10, 10);
+            Assert.IsTrue(heap.Count == 2);
             Assert.AreEqual(5, heap.Peek().value);
 
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushDuplicate_ContainsDuplicate()
-        {
-            var heap = new NativeHeap<int, int>(5, Allocator.Persistent);
-
-            heap.PushNoResize(1, 1);
-            heap.PushNoResize(1, 1);
-
-            Assert.AreEqual(2, heap.Count);
-            heap.Dispose();
-        }
-
-
-        [Test]
-        public void PushDuplicate_RemainsSorted()
-        {
-            var heap = new NativeHeap<int, int>(5, Allocator.Persistent);
-
-            heap.PushNoResize(1, 1);
-            heap.PushNoResize(3, 3);
-            heap.PushNoResize(2, 2);
-            heap.PushNoResize(5, 5);
-            heap.PushNoResize(1, 1);
-
-            Assert.AreEqual(1, heap.Pop().value);
-            Assert.AreEqual(1, heap.Pop().value);
-            Assert.AreEqual(2, heap.Pop().value);
-            Assert.AreEqual(3, heap.Pop().value);
-            Assert.AreEqual(5, heap.Pop().value);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushAndPop_RemainsSorted()
-        {
-            var heap = new NativeHeap<int, int>(5, Allocator.Persistent);
-
-            heap.PushNoResize(5, 5);
-            heap.PushNoResize(3, 3);
-            heap.PushNoResize(1, 1);
-            heap.Pop();
-
-            heap.PushNoResize(4, 4);
-            heap.PushNoResize(2, 2);
-
-            Assert.AreEqual(2, heap.Pop().value);
-            Assert.AreEqual(3, heap.Pop().value);
-            Assert.AreEqual(4, heap.Pop().value);
-            Assert.AreEqual(5, heap.Pop().value);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PopRemovesRoot()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
             heap.Push(3, 3);
-            heap.Push(1, 1);
-            Assert.AreEqual(1, heap.Pop().value);
+            Assert.IsTrue(heap.Count == 3);
+            Assert.AreEqual(3, heap.Peek().value);
+
             heap.Dispose();
         }
 
         [Test]
-        public void PopDecrementsCount()
+        public void Pop()
         {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
+            var heap = new NativeHeap<int, int>(Allocator.Temp);
 
-            heap.Push(1, 1);
-            Assert.AreEqual(1, heap.Pop().value);
-            heap.Dispose();
-        }
-
-        [Test]
-        public void Pop_RemainsSorted()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
+            Assert.Throws<System.InvalidOperationException>(() =>
+            {
+                heap.Pop();
+            });
 
             heap.Push(6, 6);
             heap.Push(1, 1);
@@ -764,192 +379,111 @@ namespace Arugula.Collections.Tests
             heap.Push(5, 5);
 
             Assert.AreEqual(1, heap.Pop().value);
+            Assert.IsFalse(heap.IsEmpty);
             Assert.AreEqual(2, heap.Pop().value);
             Assert.AreEqual(4, heap.Pop().value);
             Assert.AreEqual(5, heap.Pop().value);
             Assert.AreEqual(6, heap.Pop().value);
-            heap.Dispose();
-        }
 
-        [Test]
-        public void Push12345_Contains12345()
-        {
-            var heap = new NativeHeap<int, int>(5, Allocator.Persistent);
-
-            heap.PushNoResize(4, 4);
-            heap.PushNoResize(1, 1);
-            heap.PushNoResize(3, 3);
-            heap.PushNoResize(5, 5);
-            heap.PushNoResize(2, 2);
-
-            Assert.IsTrue(heap.Contains(4));
-            Assert.IsTrue(heap.Contains(1));
-            Assert.IsTrue(heap.Contains(3));
-            Assert.IsTrue(heap.Contains(5));
-            Assert.IsTrue(heap.Contains(2));
-            heap.Dispose();
-        }
-
-        [Test]
-        public void Push12345_DoesNotContain6()
-        {
-            var heap = new NativeHeap<int, int>(5, Allocator.Persistent);
-
-            heap.PushNoResize(4, 4);
-            heap.PushNoResize(1, 1);
-            heap.PushNoResize(3, 3);
-            heap.PushNoResize(5, 5);
-            heap.PushNoResize(2, 2);
-
-            Assert.IsFalse(heap.Contains(6));
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PopFromEmptyHeapThrows()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            Assert.Throws<InvalidOperationException>(() => heap.Pop());
+            Assert.IsTrue(heap.IsEmpty);
 
             heap.Dispose();
         }
 
         [Test]
-        public void PeekFromEmptyHeapThrows()
+        public void CreateFromArray()
         {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
+            var valuesArray = new int[] { 1, 5, 2, 3, 4 };
+            var prioritiesArray = new int[] { 1, 5, 2, 3, 4 };
+            var heap = new NativeHeap<int, int>(valuesArray, prioritiesArray, Allocator.Temp);
 
+            Assert.AreEqual(valuesArray.Length, heap.Count);
+            Assert.AreEqual(1, heap.Pop().value);
+            Assert.AreEqual(2, heap.Pop().value);
+            Assert.AreEqual(3, heap.Pop().value);
+            Assert.AreEqual(4, heap.Pop().value);
+            Assert.AreEqual(5, heap.Pop().value);
+
+            heap.Dispose();
+
+            var valuesNativeArray = new NativeArray<int>(new int[] { 1, 5, 2, 3, 4 }, Allocator.Temp);
+            var priorityNativeArray = new NativeArray<int>(new int[] { 1, 5, 2, 3, 4 }, Allocator.Temp);
+            heap = new NativeHeap<int, int>(valuesNativeArray, priorityNativeArray, Allocator.Temp);
+
+            Assert.AreEqual(valuesArray.Length, heap.Count);
+            Assert.AreEqual(1, heap.Pop().value);
+            Assert.AreEqual(2, heap.Pop().value);
+            Assert.AreEqual(3, heap.Pop().value);
+            Assert.AreEqual(4, heap.Pop().value);
+            Assert.AreEqual(5, heap.Pop().value);
+
+            heap.Dispose();
+            valuesNativeArray.Dispose();
+            priorityNativeArray.Dispose();
+        }
+
+        [Test]
+        public void Peek()
+        {
+            var heap = new NativeHeap<int, int>(Allocator.Temp);
+
+            Assert.Throws<InvalidOperationException>(() => heap.Peek());
+
+            heap.Push(10, 10);
+            Assert.AreEqual(10, heap.Peek().value);
+
+            heap.Push(3, 3);
+            Assert.AreEqual(3, heap.Peek().value);
+
+            heap.Push(5, 5);
+            Assert.AreEqual(3, heap.Peek().value);
+
+            heap.Pop();
+            Assert.AreEqual(5, heap.Peek().value);
+
+            heap.Pop();
+            Assert.AreEqual(10, heap.Peek().value);
+
+            heap.Pop();
             Assert.Throws<InvalidOperationException>(() => heap.Peek());
 
             heap.Dispose();
         }
 
         [Test]
-        public void PushPop_DoesNotChangeCount()
+        public void PushPop()
         {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
+            var heap = new NativeHeap<int, int>(Allocator.Temp);
 
-            heap.Push(3, 3);
-            heap.PushPop(5, 5);
+            Assert.DoesNotThrow(() => heap.PushPop(3, 3));
+            Assert.IsTrue(heap.Count == 0);
 
-            Assert.IsTrue(heap.Count == 1);
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushPopHigherValue_RemovesRoot()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(3, 3);
             heap.Push(2, 2);
-            heap.Push(5, 5);
+            heap.Push(4, 4);
+            heap.Push(6, 6);
 
-            heap.PushPop(4, 4);
+            Assert.AreEqual(1, heap.PushPop(1, 1).value);
+            Assert.IsTrue(heap.Count == 3);
+            Assert.AreEqual(2, heap.Peek().value);
 
-            Assert.IsFalse(heap.Contains(2));
-            heap.Dispose();
-        }
+            Assert.AreEqual(2, heap.PushPop(7, 7).value);
+            Assert.IsTrue(heap.Count == 3);
+            Assert.AreEqual(4, heap.Peek().value);
 
-        [Test]
-        public void PushPopLowerValue_RemovesRoot()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
+            Assert.AreEqual(4, heap.PushPop(5, 5).value);
 
-            heap.Push(3, 3);
-            heap.Push(2, 2);
-            heap.Push(5, 5);
-
-            heap.PushPop(1, 1);
-
-            Assert.IsFalse(heap.Contains(1));
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushPopHigherValue_AddsHigherValue()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(3, 3);
-            heap.Push(2, 2);
-            heap.Push(5, 5);
-
-            heap.PushPop(4, 4);
-
-            Assert.IsTrue(heap.Contains(4));
-            heap.Dispose();
-        }
-
-        [Test]
-        public void PushPopLowerValueDoesNotChangeHeap()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(3, 3);
-            heap.Push(2, 2);
-            heap.Push(5, 5);
-
-            heap.PushPop(1, 1);
-
-            Assert.AreEqual(2, heap.Pop().value);
-            Assert.AreEqual(3, heap.Pop().value);
             Assert.AreEqual(5, heap.Pop().value);
-
+            Assert.AreEqual(6, heap.Pop().value);
+            Assert.AreEqual(7, heap.Pop().value);
             heap.Dispose();
         }
 
         [Test]
-        public void PushPopEmptyHeapDoesNotThrow()
+        public void Replace()
         {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
+            var heap = new NativeHeap<int, int>(Allocator.Temp);
 
-            Assert.DoesNotThrow(() => heap.PushPop(1, 1));
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void Replace_DoesNotChangeCount()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(3, 3);
-            heap.Replace(5);
-
-            Assert.IsTrue(heap.Count == 1);
-            heap.Dispose();
-        }
-
-        [Test]
-        public void Replace_RemovesRoot()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(3, 3);
-            heap.Replace(5);
-
-            Assert.IsFalse(heap.Contains(3));
-            heap.Dispose();
-        }
-
-        [Test]
-        public void Replace_AddsReplacement()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(3, 3);
-            heap.Replace(5);
-
-            Assert.IsTrue(heap.Contains(5));
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ReplaceWithHigherValue_IsSorted()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
+            Assert.Throws<IndexOutOfRangeException>(() => heap.Replace(1, 1));
 
             heap.Push(3, 3);
             heap.Push(1, 1);
@@ -957,163 +491,68 @@ namespace Arugula.Collections.Tests
             heap.Push(5, 5);
             heap.Push(2, 2);
 
-            heap.Replace(7);
+            Assert.AreEqual(1, heap.Replace(7, 7));
+            Assert.AreEqual(2, heap.Peek().value);
+            Assert.IsTrue(heap.Count == 5);
 
-            Assert.AreEqual(7, heap.Pop().value);
-            Assert.AreEqual(2, heap.Pop().value);
+            Assert.AreEqual(2, heap.Replace(1, 1));
+            Assert.AreEqual(1, heap.Peek().value);
+            Assert.IsTrue(heap.Count == 5);
+
+            Assert.AreEqual(1, heap.Pop().value);
             Assert.AreEqual(3, heap.Pop().value);
             Assert.AreEqual(4, heap.Pop().value);
             Assert.AreEqual(5, heap.Pop().value);
+            Assert.AreEqual(7, heap.Pop().value);
 
             heap.Dispose();
         }
 
         [Test]
-        public void ReplaceWithLowerValue_IsSorted()
+        public void ToArray()
         {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(10, 10);
-            heap.Push(8, 8);
-            heap.Push(12, 12);
-            heap.Push(13, 13);
-            heap.Push(9, 9);
-            heap.Replace(3);
-
-            Assert.AreEqual(3, heap.Pop().value);
-            Assert.AreEqual(9, heap.Pop().value);
-            Assert.AreEqual(10, heap.Pop().value);
-            Assert.AreEqual(12, heap.Pop().value);
-            Assert.AreEqual(13, heap.Pop().value);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ReplaceWithMedianValue_IsSorted()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(10, 10);
-            heap.Push(8, 8);
-            heap.Push(12, 12);
-            heap.Push(13, 13);
-            heap.Push(9, 9);
-            heap.Replace(11);
-
-            Assert.AreEqual(11, heap.Pop().value);
-            Assert.AreEqual(9, heap.Pop().value);
-            Assert.AreEqual(10, heap.Pop().value);
-            Assert.AreEqual(12, heap.Pop().value);
-            Assert.AreEqual(13, heap.Pop().value);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ReplaceEmptyHeapThrows()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            Assert.Throws<IndexOutOfRangeException>(() => heap.Replace(1));
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void Update()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-            heap.Push(5, 5);
-            heap.Push(2, 2);
-            heap.Push(7, 7);
-            heap.Push(6, 6);
-            heap.Push(4, 4);
-            heap.Push(3, 3);
-
-            heap.UpdatePriority(5, 9);
-
-            heap.Pop(); // 2
-            heap.Pop(); // 3
-            heap.Pop(); // 4
-            heap.Pop(); // 6
-            heap.Pop(); // 7
-            Assert.AreEqual(5, heap.Pop().value); // 5
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ToArrayReturnsArrayWithSameCount()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(10, 10);
-            heap.Push(8, 8);
-            heap.Push(12, 12);
-            heap.Push(13, 13);
-            heap.Push(9, 9);
+            var values = new int[] { 10, 8, 12, 13, 9 };
+            var priorities = new int[] { 10, 8, 12, 13, 9 };
+            var heap = new NativeHeap<int, int>(values, priorities, Allocator.Temp);
 
             HeapNode<int, int>[] array = heap.ToArray();
             Assert.AreEqual(array.Length, heap.Count);
 
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ToArrayReturnsArrayWithSameElements()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(10, 10);
-            heap.Push(8, 8);
-            heap.Push(12, 12);
-            heap.Push(13, 13);
-            heap.Push(9, 9);
-
-            HeapNode<int, int>[] array = heap.ToArray();
-            Assert.AreEqual(array.Length, heap.Count);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void EmptyHeapToArrayReturnsEmptyArray()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            HeapNode<int, int>[] array = heap.ToArray();
-            Assert.AreEqual(0, array.Length);
-
-            heap.Dispose();
-        }
-
-        [Test]
-        public void ToNativeArrayReturnsNativeArrayWithSameCount()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
-
-            heap.Push(10, 10);
-            heap.Push(8, 8);
-            heap.Push(12, 12);
-            heap.Push(13, 13);
-            heap.Push(9, 9);
-
-            NativeArray<HeapNode<int, int>> nativeArray = heap.ToNativeArray(Allocator.Persistent);
+            NativeArray<HeapNode<int, int>> nativeArray = heap.ToArray(Allocator.Temp);
             Assert.AreEqual(nativeArray.Length, heap.Count);
 
+            for (int i = 0; i < values.Length; i++)
+            {
+                Assert.That(() =>
+                {
+                    for (int j = 0; j < array.Length; j++)
+                    {
+                        if (array[j].value == values[i]) return true;
+                    }
+                    return false;
+                });
+
+                Assert.That(() =>
+                {
+                    for (int j = 0; j < array.Length; j++)
+                    {
+                        if (nativeArray[j].value == values[i]) return true;
+                    }
+                    return false;
+                });
+            }
+
             nativeArray.Dispose();
             heap.Dispose();
-        }
 
-        [Test]
-        public void EmptyHeapToNativeArrayReturnsEmptyNativeArray()
-        {
-            var heap = new NativeHeap<int, int>(Allocator.Persistent);
+            heap = new NativeHeap<int, int>(Allocator.Temp);
 
-            NativeArray<HeapNode<int, int>> nativeArray = heap.ToNativeArray(Allocator.Persistent);
-            Assert.AreEqual(0, nativeArray.Length);
+            array = heap.ToArray();
+            Assert.AreEqual(0, array.Length);
 
-            nativeArray.Dispose();
+            nativeArray = heap.ToArray(Allocator.Temp);
+            Assert.AreEqual(0, array.Length);
+
             heap.Dispose();
         }
 
@@ -1132,7 +571,6 @@ namespace Arugula.Collections.Tests
             heap.Dispose();
         }
 
-        [BurstCompile]
         public struct HeapWriteJob : IJob
         {
             public NativeHeap<int, int> heap;
@@ -1143,9 +581,14 @@ namespace Arugula.Collections.Tests
             }
         }
 
-        public struct ManagedStructTest : IEquatable<ManagedStructTest>
+        public struct ManagedStructTest : IComparable<ManagedStructTest>, IEquatable<ManagedStructTest>
         {
             public string managedVar;
+
+            public int CompareTo(ManagedStructTest other)
+            {
+                return managedVar.CompareTo(other.managedVar);
+            }
 
             public bool Equals(ManagedStructTest other)
             {
@@ -1158,9 +601,44 @@ namespace Arugula.Collections.Tests
         {
             Assert.Throws<NotSupportedException>(() =>
             {
-                var heap = new NativeHeap<ManagedStructTest, int>(10, Unity.Collections.Allocator.Temp);
+                var heap = new NativeHeap<ManagedStructTest>(10, Unity.Collections.Allocator.Temp);
 
                 heap.Dispose();
+            });
+        }
+
+        [Test]
+        public void Dispose()
+        {
+            var heap = new NativeHeap<int, int>(Allocator.Temp);
+
+            Assert.IsTrue(heap.IsCreated);
+            heap.Dispose();
+
+            Assert.IsFalse(heap.IsCreated);
+
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                heap.Dispose();
+            });
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                heap.Dispose(default);
+            });
+
+            heap = new NativeHeap<int, int>(Allocator.TempJob);
+            Assert.IsTrue(heap.IsCreated);
+
+            heap.Dispose(default);
+            Assert.IsFalse(heap.IsCreated);
+
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                heap.Dispose();
+            });
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                heap.Dispose(default);
             });
         }
     }

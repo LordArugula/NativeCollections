@@ -33,52 +33,75 @@ namespace Arugula.Collections.Tests
         }
 
         [Test]
-        public void MultipleDisposeThrows()
+        public void Dispose()
         {
             var stack = new NativeStack<int>(Allocator.Temp);
 
-            stack.Dispose();
+            Assert.IsTrue(stack.IsCreated);
 
-            Assert.Throws<System.InvalidOperationException>(() =>
+            stack.Dispose();
+            Assert.IsFalse(stack.IsCreated);
+            
+            Assert.Throws<System.ObjectDisposedException>(() =>
             {
                 stack.Dispose();
             });
+
+            stack = new NativeStack<int>(Allocator.TempJob);
+            Assert.IsTrue(stack.IsCreated);
+
+            stack.Dispose(default).Complete();
+            Assert.IsFalse(stack.IsCreated);
+
+            Assert.Throws<System.ObjectDisposedException>(() =>
+            {
+                stack.Dispose();
+            });
+
         }
 
         [Test]
-        public void Push_InsertsAtTopOfStack()
+        public void Push()
         {
             var stack = new NativeStack<int>(Allocator.Temp);
 
             stack.Push(5);
             Assert.AreEqual(5, stack.Peek());
+            Assert.AreEqual(1, stack.Count);
+
             stack.Push(3);
             Assert.AreEqual(3, stack.Peek());
+            Assert.AreEqual(2, stack.Count);
+            
             stack.Push(4);
             Assert.AreEqual(4, stack.Peek());
+            Assert.AreEqual(3, stack.Count);
 
             stack.Dispose();
         }
 
         [Test]
-        public void Pop_RemoveFromTopOfStack()
+        public void Pop()
         {
             var stack = new NativeStack<int>(Allocator.Temp);
+
+            Assert.Throws<System.InvalidOperationException>(() =>
+            {
+                stack.Pop();
+            });
 
             stack.Push(5);
             stack.Push(3);
             stack.Push(4);
+
             Assert.AreEqual(4, stack.Pop());
+            Assert.AreEqual(2, stack.Count);
+
             Assert.AreEqual(3, stack.Pop());
+            Assert.AreEqual(1, stack.Count);
+
             Assert.AreEqual(5, stack.Pop());
-
-            stack.Dispose();
-        }
-
-        [Test]
-        public void Pop_FromEmptyStackThrows()
-        {
-            var stack = new NativeStack<int>(Allocator.Temp);
+            Assert.AreEqual(0, stack.Count);
 
             Assert.Throws<System.InvalidOperationException>(() =>
             {
@@ -89,9 +112,14 @@ namespace Arugula.Collections.Tests
         }
 
         [Test]
-        public void Peek_ReturnsElementFromTopOfStack()
+        public void Peek()
         {
             var stack = new NativeStack<int>(Allocator.Temp);
+
+            Assert.Throws<System.InvalidOperationException>(() =>
+            {
+                stack.Peek();
+            });
 
             stack.Push(5);
             Assert.AreEqual(5, stack.Peek());
@@ -104,20 +132,7 @@ namespace Arugula.Collections.Tests
         }
 
         [Test]
-        public void Peek_FromEmptyStackThrows()
-        {
-            var stack = new NativeStack<int>(Allocator.Temp);
-
-            Assert.Throws<System.InvalidOperationException>(() =>
-            {
-                stack.Peek();
-            });
-
-            stack.Dispose();
-        }
-
-        [Test]
-        public void Contains_FindsElementInStack()
+        public void Contains()
         {
             var stack = new NativeStack<int>(Allocator.Temp);
 
@@ -131,19 +146,6 @@ namespace Arugula.Collections.Tests
                 Assert.IsTrue(stack.Contains(i));
             }
 
-            stack.Dispose();
-        }
-
-        [Test]
-        public void Contains_DoesNotFindsNonExistantElementsInStack()
-        {
-            var stack = new NativeStack<int>(Allocator.Temp);
-
-            for (int i = 0; i < 10; i++)
-            {
-                stack.Push(i);
-            }
-
             Assert.IsFalse(stack.Contains(15));
             Assert.IsFalse(stack.Contains(-1));
             Assert.IsFalse(stack.Contains(41));
@@ -152,7 +154,7 @@ namespace Arugula.Collections.Tests
         }
 
         [Test]
-        public void ToArray_CreatesArrayWithSameLength()
+        public void ToArray()
         {
             var stack = new NativeStack<int>(Allocator.Temp);
 
@@ -164,30 +166,17 @@ namespace Arugula.Collections.Tests
             var array = stack.ToArray();
             Assert.AreEqual(stack.Count, array.Length);
 
-            stack.Dispose();
-        }
-
-        [Test]
-        public void ToArray_CreatesArrayWithSameElements()
-        {
-            var stack = new NativeStack<int>(Allocator.Temp);
-
-            for (int i = 0; i < 10; i++)
-            {
-                stack.Push(i);
-            }
-
-            var array = stack.ToArray();
             for (int i = 10 - 1; i >= 0; i--)
             {
                 Assert.AreEqual(array[i], stack.Pop());
             }
 
+
             stack.Dispose();
         }
 
         [Test]
-        public void ToArray_CreatesNativeArrayWithSameLength()
+        public void ToNativeArray()
         {
             var stack = new NativeStack<int>(Allocator.Temp);
 
@@ -199,21 +188,6 @@ namespace Arugula.Collections.Tests
             var array = stack.ToArray(Allocator.Temp);
             Assert.AreEqual(stack.Count, array.Length);
 
-            stack.Dispose();
-            array.Dispose();
-        }
-
-        [Test]
-        public void ToArray_CreatesNativeArrayWithSameElements()
-        {
-            var stack = new NativeStack<int>(Allocator.Temp);
-
-            for (int i = 0; i < 10; i++)
-            {
-                stack.Push(i);
-            }
-
-            var array = stack.ToArray(Allocator.Temp);
             for (int i = 10 - 1; i >= 0; i--)
             {
                 Assert.AreEqual(array[i], stack.Pop());
@@ -284,7 +258,7 @@ namespace Arugula.Collections.Tests
             stack.Push(1);
             stack.Dispose(default);
 
-            Assert.Throws<System.InvalidOperationException>(() =>
+            Assert.Throws<System.ObjectDisposedException>(() =>
             {
                 stack.Dispose();
             });
