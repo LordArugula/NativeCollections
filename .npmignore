@@ -1,0 +1,4 @@
+.npmignore
+.gitignore
+Arugula.Collections.Tests/**
+Arugula.Collections.PerformanceTests/**
