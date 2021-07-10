@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2021-07-10
+### Changed
+ - Updated package dependencies
+ - Changed minimum Unity version to 2020.3.0f1.
+### Removed
+ - Removed NativePtr because apparently Unity added NativeReference to Collections in 0.11.0-preview.17.
+ - Removed NativeHeap<T> in favor of NativeHeap<TValue, TPriority>.
+
 ## [0.5.0] - 2021-04-09
 ### Added
 - Added NativeArray3D native collection
